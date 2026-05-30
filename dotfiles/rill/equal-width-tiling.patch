@@ -1,0 +1,125 @@
+diff --git a/src/keybinding.zig b/src/keybinding.zig
+index f57f3cb..9803b66 100644
+--- a/src/keybinding.zig
++++ b/src/keybinding.zig
+@@ -190,6 +190,7 @@ fn keybindingPressed(action: types.Action, wm: *types.WindowManager) void {
+                 workspace,
+                 target_workspace,
+                 allocator,
++                wm.config,
+             ) catch |err| {
+                 std.debug.print("Failed to move window: {}\n", .{err});
+                 return;
+@@ -211,6 +212,7 @@ fn keybindingPressed(action: types.Action, wm: *types.WindowManager) void {
+                 workspace,
+                 target_workspace,
+                 allocator,
++                wm.config,
+             ) catch |err| {
+                 std.debug.print("Failed to move window: {}\n", .{err});
+                 return;
+@@ -232,6 +234,7 @@ fn keybindingPressed(action: types.Action, wm: *types.WindowManager) void {
+                 workspace,
+                 target_workspace,
+                 allocator,
++                wm.config,
+             ) catch |err| {
+                 std.debug.print("Failed to move window: {}\n", .{err});
+                 return;
+@@ -313,6 +316,7 @@ fn keybindingPressed(action: types.Action, wm: *types.WindowManager) void {
+                     workspace,
+                     target_workspace,
+                     allocator,
++                    wm.config,
+                 ) catch |err| {
+                     std.debug.print("Failed to move window: {}\n", .{err});
+                     return;
+@@ -339,6 +343,7 @@ fn keybindingPressed(action: types.Action, wm: *types.WindowManager) void {
+                     workspace,
+                     target_workspace,
+                     allocator,
++                    wm.config,
+                 ) catch |err| {
+                     std.debug.print("Failed to move window: {}\n", .{err});
+                     return;
+@@ -365,6 +370,7 @@ fn keybindingPressed(action: types.Action, wm: *types.WindowManager) void {
+                     workspace,
+                     target_workspace,
+                     allocator,
++                    wm.config,
+                 ) catch |err| {
+                     std.debug.print("Failed to move window: {}\n", .{err});
+                     return;
+@@ -391,6 +397,7 @@ fn keybindingPressed(action: types.Action, wm: *types.WindowManager) void {
+                     workspace,
+                     target_workspace,
+                     allocator,
++                    wm.config,
+                 ) catch |err| {
+                     std.debug.print("Failed to move window: {}\n", .{err});
+                     return;
+@@ -426,6 +433,7 @@ fn move_window_to_workspace(
+     workspace: *types.Workspace,
+     target_workspace: *types.Workspace,
+     allocator: std.mem.Allocator,
++    config: types.Config,
+ ) !void {
+     const window = workspace.window_list.orderedRemove(window_idx);
+ 
+@@ -440,6 +448,10 @@ fn move_window_to_workspace(
+ 
+     try target_workspace.window_list.insert(allocator, target_window_idx, window);
+     target_workspace.focused_window_idx = target_window_idx;
++    if (config.equal_width_tiling) {
++        workspace.redistributeProportions();
++        target_workspace.redistributeProportions();
++    }
+ }
+ 
+ fn focus_output(output: *types.Output, river_seat: ?*river.SeatV1) void {
+diff --git a/src/types.zig b/src/types.zig
+index 448aea5..502f51f 100644
+--- a/src/types.zig
++++ b/src/types.zig
+@@ -46,6 +46,13 @@ pub const Window = struct {
+ pub const Workspace = struct {
+     window_list: std.ArrayList(Window) = .empty,
+     focused_window_idx: ?usize = null,
++
++    pub fn redistributeProportions(self: *Workspace) void {
++        const n = self.window_list.items.len;
++        if (n == 0) return;
++        const equal: f32 = 1.0 / @as(f32, @floatFromInt(n));
++        for (self.window_list.items) |*w| w.proportion = equal;
++    }
+ };
+ 
+ pub const Output = struct {
+@@ -70,6 +77,7 @@ pub const Config = struct {
+     center_focused_window: enum { never, always, single } = .never,
+     no_csd: bool = true,
+     animation_duration: u32 = 200,
++    equal_width_tiling: bool = false,
+     border: struct {
+         width: u8 = 3,
+         focused_color: Color = .{ .r = 141, .g = 214, .b = 0, .a = 1.0 },
+diff --git a/src/window.zig b/src/window.zig
+index de39a2f..658882b 100644
+--- a/src/window.zig
++++ b/src/window.zig
+@@ -51,6 +51,7 @@ fn addWindow(
+     if (workspace.focused_window_idx) |idx| window_idx = idx + 1;
+     try workspace.window_list.insert(allocator, window_idx, window);
+     workspace.focused_window_idx = window_idx;
++    if (config.equal_width_tiling) workspace.redistributeProportions();
+ }
+ 
+ fn windowListener(
+@@ -93,6 +94,7 @@ fn windowListener(
+                     } else if (idx <= window_idx and window_idx != 0) {
+                         workspace.focused_window_idx = window_idx - 1;
+                     }
++                    if (wm.config.equal_width_tiling) workspace.redistributeProportions();
+                 },
+                 .fullscreen_requested => {
+                     window.is_fullscreen = true;

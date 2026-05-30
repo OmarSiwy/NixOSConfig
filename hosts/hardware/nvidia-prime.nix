@@ -1,0 +1,36 @@
+{
+  lib,
+  pkgs,
+  config,
+  ...
+}:
+with lib;
+let
+  cfg = config.drivers.nvidia-prime;
+in
+{
+  options.drivers.nvidia-prime = {
+    enable = mkEnableOption "Enable Nvidia Prime Hybrid GPU Offload";
+    intelBusID = mkOption {
+      type = types.str;
+      default = "PCI:0:2:0"; # ← CHANGED (was PCI:1:0:0)
+    };
+    nvidiaBusID = mkOption {
+      type = types.str;
+      default = "PCI:1:0:0"; # ← CHANGED (was PCI:0:2:0)
+    };
+  };
+  config = mkIf cfg.enable {
+    hardware.nvidia = {
+      prime = {
+        offload = {
+          enable = true;
+          enableOffloadCmd = true;
+        };
+        # Legion 16IRX9 bus IDs (will be correct once hybrid mode enabled in BIOS)
+        intelBusId = "${cfg.intelBusID}";
+        nvidiaBusId = "${cfg.nvidiaBusID}";
+      };
+    };
+  };
+}

@@ -1,0 +1,40 @@
+[
+  {
+    "name": "laptop",
+    "output": "eDP-1",
+    "include": "~/.config/waybar/modules.json",
+    "modules-right": [
+      "custom/bluetooth",
+      "custom/separator#mic",
+      "wireplumber",
+      "custom/separator#mic",
+      "custom/microphone",
+      "custom/separator#2",
+      "battery",
+      "custom/separator#4",
+      "network",
+      "tray",
+      "custom/separator#5",
+      "custom/power"
+    ]
+  },
+  {
+    "name": "external",
+    "output": "!eDP-1",
+    "include": "~/.config/waybar/modules.json",
+    "modules-right": [
+      "custom/bluetooth",
+      "custom/separator#mic",
+      "wireplumber",
+      "custom/separator#mic",
+      "custom/microphone",
+      "custom/separator#2",
+      "battery",
+      "custom/separator#4",
+      "network",
+      "tray",
+      "custom/separator#5",
+      "custom/power"
+    ]
+  }
+]

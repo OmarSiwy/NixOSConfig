@@ -1,0 +1,19 @@
+# Clipboard
+clipboard-read = allow
+clipboard-write = allow
+copy-on-select = clipboard
+app-notifications = no-clipboard-copy
+
+# Font
+font-thicken = true
+font-family = Iosevka Nerd Font
+font-size = 10
+font-style = bold
+
+# Cursor
+cursor-style = block
+cursor-style-blink = false
+cursor-click-to-move = false
+
+# Window decorations - disable title bar
+window-decoration = false

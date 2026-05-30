@@ -1,0 +1,25 @@
+# kanshi config — dynamic display configuration for river
+#
+# Outputs are matched by "Make Model Serial" (see `wlr-randr` output).
+# Kanshi picks the first profile whose outputs are ALL currently connected.
+# Reorder profiles if needed — most specific first.
+#
+# Edit this file with `wdisplays` (GUI) to tweak live, then copy your new
+# values here manually, OR write a fresh profile section.
+
+# Laptop + LG UltraGear 5K2K connected
+profile docked {
+    output "BOE 0x0C1D 0x00000005" enable mode 2560x1600@240Hz position 0,0 scale 1 adaptive-sync off
+    output "LG Electronics LG ULTRAGEAR 411NTMX41043" enable mode 5120x1440@200Hz position 2560,0 scale 1 adaptive-sync off
+}
+
+# Dell S2725DS external monitor
+profile dell {
+    output "BOE 0x0C1D 0x00000005" enable mode 2560x1600@240Hz position 2560,0 scale 1 adaptive-sync off
+    output "Dell Inc. DELL S2725DS 21J9S44" enable mode 2560x1440@60Hz position 0,0 scale 1 adaptive-sync off
+}
+
+# Laptop only (fallback, matches anything else)
+profile laptop {
+    output "BOE 0x0C1D 0x00000005" enable mode 2560x1600@240Hz position 0,0 scale 1 adaptive-sync off
+}

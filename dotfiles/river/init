@@ -1,0 +1,28 @@
+#!/bin/bash
+# River 0.4.1 init — non-monolithic mode; all window management is handled by the WM.
+# Keybindings, tags, focus, borders, layout → configure in your WM's own config file.
+
+# Cursor theme — exported before dbus handoff
+export XCURSOR_THEME=Volantes
+export XCURSOR_SIZE=24
+# WLR_NO_HARDWARE_CURSORS=1 removed — wlroots 0.19 + NVIDIA Prime offload (Intel primary) supports hardware cursors natively
+
+# ── Window Manager ─────────────────────────────────────────────────────────────
+# rill: minimalist scrolling WM, full-width windows + workspaces = non-scrolling feel.
+# Config: ~/.config/rill/config.zon  (see dotfiles/rill/config.zon)
+# Source: https://codeberg.org/lzj15/rill
+killall rill 2>/dev/null || true
+rill &
+
+# ── D-Bus / systemd env handoff ────────────────────────────────────────────────
+# Run synchronously so apps launched later (waybar, ghostty, etc.) inherit
+# the correct environment. Capped at 5s to avoid blocking on a stale bus.
+timeout 5 bash -c '
+    dbus-update-activation-environment SEATD_SOCK DISPLAY WAYLAND_DISPLAY \
+        XDG_CURRENT_DESKTOP=river XCURSOR_THEME XCURSOR_SIZE
+    systemctl --user import-environment SEATD_SOCK DISPLAY WAYLAND_DISPLAY \
+        XDG_CURRENT_DESKTOP XCURSOR_THEME XCURSOR_SIZE
+'
+
+# ── System Services ────────────────────────────────────────────────────────────
+bash "$HOME/.config/river/scripts/process.sh" &
