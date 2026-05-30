@@ -9,6 +9,7 @@ uptime_info="$(uptime -p | sed -e 's/up //g')"
 
 shutdown='⏻' # Power symbol
 reboot='⭮'   # Circular arrow
+sleep='🌙'    # Sleep/lock symbol
 logout='⎋'   # Exit symbol
 
 # Rofi Command
@@ -41,7 +42,7 @@ confirm_action() {
 
 # Display Menu
 run_rofi() {
-    echo -e "$shutdown\n$reboot\n$logout" | rofi_cmd
+    echo -e "$shutdown\n$reboot\n$sleep\n$logout" | rofi_cmd
 }
 
 # Execute Commands
@@ -55,6 +56,9 @@ execute_action() {
             ;;
         --reboot)
             systemctl reboot --no-block
+            ;;
+        --sleep)
+            swaylock -f -c 1a1b26
             ;;
         --logout)
             loginctl terminate-session "$XDG_SESSION_ID"
@@ -78,6 +82,9 @@ $shutdown)
     ;;
 $reboot)
     execute_action --reboot
+    ;;
+$sleep)
+    execute_action --sleep
     ;;
 $logout)
     execute_action --logout

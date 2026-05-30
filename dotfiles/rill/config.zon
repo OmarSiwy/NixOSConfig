@@ -30,9 +30,9 @@
 
         // -- Screenshots --
         // Super+Shift+S -> area screenshot to clipboard
-        .{ .key = "s", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "f=/tmp/screenshot-$$.png && grim -g \"$(slurp)\" \"$f\" && wl-copy -t image/png < \"$f\" && rm \"$f\" && notify-send Screenshot 'Area copied to clipboard'" } } },
+        .{ .key = "s", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/river/scripts/screenshot.sh" } } },
         // Super+Shift+A -> area screenshot to file
-        .{ .key = "a", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "grim -g \"$(slurp)\" \"$HOME/Pictures/Screenshots/$(date +%Y-%m-%d_%H-%M-%S).png\" && notify-send Screenshot 'Area saved to Pictures/Screenshots'" } } },
+        .{ .key = "a", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/river/scripts/screenshot-save.sh" } } },
 
         // -- Window control --
         .{ .key = "q", .modifiers = .{ .mod4 = true }, .action = .close_window },
