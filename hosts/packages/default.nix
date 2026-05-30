@@ -97,7 +97,7 @@ in
       obs-studio
       yt-dlp
       (mpv.override { scripts = [ mpvScripts.mpris ]; })
-      wasistlos # Whatsapp
+      karere # Whatsapp
       # ========== COMMUNICATION ==========
       slack
       teams-for-linux

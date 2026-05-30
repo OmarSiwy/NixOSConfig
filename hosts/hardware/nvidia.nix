@@ -59,12 +59,15 @@ in
 
       nvidiaSettings = true;
 
-      # Use stable (580.105.08 as of Apr 2026) from chaotic's kernel packages.
-      # legacy_580 does not exist in chaotic-nyx's Dec 2025 nixpkgs kernel set.
-      # stable now resolves to 580.x (not 595.x), so it avoids the old regressions:
-      #   - 595.58.03 had Wine/Lutris/Battle.net/DXVK issues
-      #   - 580.x is stable for RTX 4060 (Ada Lovelace) + Lutris + DXVK
-      package = config.boot.kernelPackages.nvidiaPackages.stable;
+      # Pin legacy_580 (580.142). `stable` now resolves to 595.71.05, which is
+      # broken on this setup:
+      #   - 595.71.05 still uses the screen_info struct refactored in kernel 7.0
+      #     -> can't map framebuffers -> black screens / VC corruption
+      #   - 595 + Chromium/QtWebEngine on Wayland -> raster tile corruption
+      #     (white/black garbage on YouTube thumbnails/video) — confirmed on CachyOS
+      # 580.142 avoids both and is stable for RTX 4060 (Ada) + Lutris + DXVK.
+      # legacy_580 now exists in chaotic-nyx's kernel set (was missing in Dec 2025).
+      package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
     };
   };
 }

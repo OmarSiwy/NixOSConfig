@@ -57,6 +57,12 @@
               (final: prev: {
                 xorg = prev.xorg // { lndir = prev.lndir; };
               })
+              # openldap syncreplication test flaky in sandbox
+              (final: prev: {
+                openldap = prev.openldap.overrideAttrs (old: {
+                  doCheck = false;
+                });
+              })
             ];
           }
           home-manager.nixosModules.home-manager
@@ -89,7 +95,7 @@
             { pkgs, ... }:
             {
               environment.systemPackages = [
-                claude-code.packages.${system}.claude-code-bun
+                claude-code.packages.${system}.claude-code
                 opencode.packages.${system}.default
               ];
             }

@@ -1,7 +1,7 @@
 { pkgs, username, ... }:
 {
   services = {
-    seatd.enable = true;
+    seatd.enable = false; # broken Type=notify -> systemd kills it every 90s -> river loses seat0 -> crash. logind handles seats.
 
     # Tailscale
     tailscale.enable = true;
@@ -63,10 +63,10 @@
   };
 
   services.logind = {
-    lidSwitch = "ignore";
-    lidSwitchExternalPower = "ignore";
-    lidSwitchDocked = "ignore";
     settings.Login = {
+      HandleLidSwitch = "ignore";
+      HandleLidSwitchExternalPower = "ignore";
+      HandleLidSwitchDocked = "ignore";
       HandleSuspendKey = "ignore";
       HandleHibernateKey = "ignore";
       IdleAction = "ignore";

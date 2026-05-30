@@ -53,7 +53,7 @@ in
 
   programs.spicetify = {
     enable = true;
-    theme = spicePkgs.themes.lucid;
+    theme = spicePkgs.themes.tokyoNight;
     enabledExtensions = with spicePkgs.extensions; [
       adblockify
       hidePodcasts
