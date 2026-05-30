@@ -1,6 +1,6 @@
 # NixOS Configuration
 
-NixOS + Home Manager flake for a Lenovo Legion laptop with Intel/NVIDIA hybrid graphics, River (Wayland compositor), and rill (scrolling window manager).
+NixOS + Home Manager flake using River (Wayland compositor), and rill (scrolling window manager).
 
 ## Structure
 
