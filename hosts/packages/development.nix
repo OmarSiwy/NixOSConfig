@@ -1,20 +1,10 @@
 { pkgs, ... }:
 
-let
-  chromiumRevision =
-    (builtins.head (
-      builtins.filter (b: b.name == "chromium")
-        (builtins.fromJSON (builtins.readFile "${pkgs.playwright-driver}/browsers.json")).browsers
-    )).revision;
-  playwrightChromium = "${pkgs.playwright-driver.browsers}/chromium-${chromiumRevision}/chrome-linux/chrome";
-in
-
 {
   environment.systemPackages = with pkgs; [
     bun
     nodejs
     playwright-driver.browsers
-    chromium
 
     # ========== LANGUAGE SERVERS ==========
     lua-language-server
@@ -80,6 +70,5 @@ in
     PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
     PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
-    PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH = playwrightChromium;
   };
 }

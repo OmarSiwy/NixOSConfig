@@ -59,15 +59,7 @@ in
 
       nvidiaSettings = true;
 
-      # Pin legacy_580 (580.142). `stable` now resolves to 595.71.05, which is
-      # broken on this setup:
-      #   - 595.71.05 still uses the screen_info struct refactored in kernel 7.0
-      #     -> can't map framebuffers -> black screens / VC corruption
-      #   - 595 + Chromium/QtWebEngine on Wayland -> raster tile corruption
-      #     (white/black garbage on YouTube thumbnails/video) — confirmed on CachyOS
-      # 580.142 avoids both and is stable for RTX 4060 (Ada) + Lutris + DXVK.
-      # legacy_580 now exists in chaotic-nyx's kernel set (was missing in Dec 2025).
-      package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
+      package = config.boot.kernelPackages.nvidiaPackages.stable;
     };
   };
 }

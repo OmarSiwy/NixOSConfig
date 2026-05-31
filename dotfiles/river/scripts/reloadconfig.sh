@@ -3,7 +3,7 @@ echo "🔄 Reloading configurations..."
 set -e
 
 echo '📁 Removing old configs...'
-rm -rf ~/.config/{fastfetch,ghostty,kanshi,rill,mako,nvim,river,rofi,waybar,opencode,xdg-desktop-portal-wlr}
+rm -rf ~/.config/{fastfetch,ghostty,kanshi,rill,mako,nvim,river,rofi,waybar,xdg-desktop-portal-wlr}
 
 echo '📋 Copying new dotfiles...'
 cp -r $HOME/Documents/nixos/dotfiles/* ~/.config/

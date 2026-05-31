@@ -1,4 +1,9 @@
-{ pkgs, pkgs-stable, inputs, ... }:
+{
+  pkgs,
+  pkgs-stable,
+  inputs,
+  ...
+}:
 let
   python-packages = pkgs.python3.withPackages (
     ps: with ps; [
@@ -75,8 +80,7 @@ in
       xdg-user-dirs
       xdg-utils
       yad
-      # ========== ROBLOX / WINE ==========
-      vinegar
+      # ========== WINE ==========
       wineWow64Packages.staging
       winetricks
       samba
@@ -104,6 +108,7 @@ in
       zoom-us
       vesktop
       # ========== DEVELOPMENT TOOLS ==========
+      ltspice
       obsidian
       windsurf
       zathura

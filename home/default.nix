@@ -1,5 +1,6 @@
 {
   pkgs,
+  pkgs-stable,
   inputs,
   username,
   ...
@@ -34,7 +35,10 @@ in
       content.plugins = true;
     };
     extraConfig = ''
-      c.qt.args += ["widevine-path=${pkgs.widevine-cdm}/share/google/chrome/WidevineCdm/_platform_specific/linux_x64/libwidevinecdm.so"]
+      c.qt.args += [
+          "widevine-path=${pkgs.widevine-cdm}/share/google/chrome/WidevineCdm/_platform_specific/linux_x64/libwidevinecdm.so",
+          "disable-gpu-compositing",
+      ]
     '';
   };
 

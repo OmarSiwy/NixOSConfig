@@ -13,7 +13,7 @@ echo ''
 
 echo '📁 Removing old configs...'
 mkdir -p ~/.config
-rm -rf ~/.config/{fastfetch,ghostty,mako,nvim,river,rofi,waybar,opencode}
+rm -rf ~/.config/{fastfetch,ghostty,mako,nvim,river,rofi,waybar}
 
 echo '📋 Copying dotfiles...'
 cp -r dotfiles/* ~/.config/

@@ -18,10 +18,6 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    opencode = {
-      url = "github:dan-online/opencode-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
   };
   outputs =
@@ -32,7 +28,6 @@
       home-manager,
       lanzaboote,
       claude-code,
-      opencode,
       ...
     }:
     let
@@ -55,7 +50,9 @@
               (import ./hosts/overlays/river.nix)
               # Suppress "xorg.lndir has been renamed to lndir" deprecation warning
               (final: prev: {
-                xorg = prev.xorg // { lndir = prev.lndir; };
+                xorg = prev.xorg // {
+                  lndir = prev.lndir;
+                };
               })
               # openldap syncreplication test flaky in sandbox
               (final: prev: {
@@ -70,7 +67,7 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              extraSpecialArgs = { inherit inputs username; };
+              extraSpecialArgs = { inherit inputs username pkgs-stable; };
               users.${username} = import ./home;
             };
           }
@@ -96,7 +93,6 @@
             {
               environment.systemPackages = [
                 claude-code.packages.${system}.claude-code
-                opencode.packages.${system}.default
               ];
             }
           )
