@@ -13,10 +13,10 @@ echo ''
 
 echo '📁 Removing old configs...'
 mkdir -p ~/.config
-rm -rf ~/.config/{fastfetch,ghostty,mako,nvim,river,rofi,waybar}
+rm -rf ~/.config/{fastfetch,ghostty,kanshi,mako,nvim,rill,river,rofi,waybar}
 
 echo '📋 Copying dotfiles...'
-cp -r dotfiles/* ~/.config/
+cp -r "$FLAKE_DIR"/dotfiles/* ~/.config/
 
 echo '🧹 Cleaning caches...'
 rm -rf ~/.cache/{fastfetch,ghostty,nvim,rofi,swaybg}

@@ -21,7 +21,7 @@ hosts/                     # System-level NixOS config
   overlays/                # River 0.4.5 + rill 0.6.0 overlay
     rill/                  # Rill WM source (used by overlay)
 home/                      # User-level Home Manager config
-  default.nix              # Spicetify, qutebrowser, mimeapps
+  default.nix              # Spicetify, Widevine, mimeapps
   programs/git.nix         # Git config
   programs/zsh.nix         # Zsh, aliases, oh-my-zsh
 dotfiles/                  # Raw dotfiles copied to ~/.config/

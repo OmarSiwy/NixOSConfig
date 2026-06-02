@@ -11,7 +11,7 @@ opt.clipboard = "unnamedplus"
 opt.undofile = true
 
 -- Line numbers
-opt.number = true
+opt.number = false
 
 -- Relative line numbers
 opt.relativenumber = false
@@ -110,7 +110,7 @@ g.loaded_netrwPlugin = 1
 g.NERDTreeShowHidden = 1
 
 -- GUI settings
-opt.guifont = { "FiraCode Nerd Font", ":h13" }
+opt.guifont = { "Iosevka Nerd Font", ":h13" }
 
 -- Settings for Neovide
 g.neovide_cursor_vfx_mode = "railgun"

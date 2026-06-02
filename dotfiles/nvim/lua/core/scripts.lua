@@ -1,5 +1,5 @@
 -- Colorscheme
-cmd("colorscheme tokyonight")
+cmd("colorscheme embark")
 
 -- Run ":so" after writing .zshrc
 cmd("autocmd BufWritePost ~/.zshrc so %")

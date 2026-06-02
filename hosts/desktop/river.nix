@@ -1,5 +1,9 @@
 { pkgs, ... }:
 let
+  wlCopyRs = pkgs.writeShellScriptBin "wl-copy-rs" ''
+    exec ${pkgs.wl-clipboard-rs}/bin/wl-copy "$@"
+  '';
+
   wowup-cf-fixed = pkgs.symlinkJoin {
     name = "wowup-cf";
     paths = [ pkgs.wowup-cf ];
@@ -107,6 +111,9 @@ in
     grim
     slurp
     wl-clipboard
+    wl-clipboard-rs
+    wlCopyRs
+    wl-clip-persist
     imagemagick
 
     # ── Audio / Media ────────────────────────────────
@@ -130,13 +137,43 @@ in
     python3Packages.pyqt6
   ];
 
-  fonts.packages = with pkgs; [
-    noto-fonts
-    fira-code
-    jetbrains-mono
-    font-awesome
-    nerd-fonts.jetbrains-mono
-  ];
+  fonts = {
+    fontDir.enable = true;
+
+    fontconfig.defaultFonts = {
+      monospace = [
+        "Iosevka"
+        "Iosevka Nerd Font"
+        "Liberation Mono"
+        "DejaVu Sans Mono"
+      ];
+      sansSerif = [
+        "Noto Sans"
+        "Arial"
+        "Liberation Sans"
+        "DejaVu Sans"
+      ];
+      serif = [
+        "Noto Serif"
+        "Times New Roman"
+        "Liberation Serif"
+        "DejaVu Serif"
+      ];
+    };
+
+    packages = with pkgs; [
+      noto-fonts
+      iosevka
+      font-awesome
+      nerd-fonts.iosevka
+
+      # Wine apps such as LTSpice behave better with broader Windows-compatible
+      # fallback families available through fontconfig.
+      liberation_ttf
+      dejavu_fonts
+      corefonts
+    ];
+  };
 
   programs = {
     dconf.enable = true;

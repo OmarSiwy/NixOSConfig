@@ -1,7 +1,6 @@
 {
   pkgs,
   pkgs-stable,
-  inputs,
   ...
 }:
 let
@@ -42,19 +41,58 @@ let
         # the __NV_PRIME_* vars above already steer it to the dGPU.
     '';
   };
+
+  # Virtual-desktop registry tweak imported into the LTSpice Wine prefix on
+  # first launch (see ltspice-vd below).
+  ltspiceVdReg = pkgs.writeText "ltspice-vdesktop.reg" ''
+    Windows Registry Editor Version 5.00
+
+    [HKEY_CURRENT_USER\Software\Wine\Explorer]
+    "Desktop"="Default"
+
+    [HKEY_CURRENT_USER\Software\Wine\Explorer\Desktops]
+    "Default"="2560x1600"
+  '';
+
+  # LTSpice runs under Wine via XWayland. On the river/rill (Wayland) session
+  # Wine and the compositor race over mapping/repainting top-level windows, so
+  # the schematic-editor child window (the "tab") intermittently never appears
+  # while the modal main window stays non-clickable (forcing a kill), and some
+  # toolbar/label text fails to paint.
+  #
+  # Fix: run LTSpice inside a Wine *virtual desktop* (HKCU\Software\Wine\Explorer).
+  # Wine then becomes its own internal window manager and the compositor only ever
+  # sees ONE top-level surface, so every child window maps and repaints reliably.
+  #
+  # The setting is imported once per prefix (guarded by a marker file) using the
+  # SAME wine64 the ltspice package bundles, so it never triggers a prefix rebuild.
+  # The desktop is sized to the panel (2560x1600) — fullscreen the window (Super+F)
+  # for an exact 1:1 surface with no clipping. The wrapped binary keeps the name
+  # `ltspice`, so the upstream .desktop entry (Exec=ltspice) resolves to it via PATH.
+  ltspice-vd = pkgs.symlinkJoin {
+    name = "ltspice-vd";
+    paths = [ pkgs.ltspice ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      rm -f $out/bin/ltspice
+      makeWrapper ${pkgs.ltspice}/bin/ltspice $out/bin/ltspice \
+        --run '
+          __pfx="''${WINEPREFIX:-''${XDG_DATA_HOME:-$HOME/.local/share}/ltspice}"
+          if [ ! -e "$__pfx/.ltspice-vdesktop" ]; then
+            WINEPREFIX="$__pfx" WINEARCH=win64 ${pkgs.wine64}/bin/wine regedit /S ${ltspiceVdReg} >/dev/null 2>&1 \
+              && WINEPREFIX="$__pfx" ${pkgs.wine64}/bin/wineserver -w >/dev/null 2>&1 \
+              && touch "$__pfx/.ltspice-vdesktop"
+          fi
+        '
+    '';
+  };
 in
 {
   imports = [
     ./development.nix
-    ./orcaslicer.nix
   ];
 
   nixpkgs.config.allowUnfree = true;
-
-  services.orcaslicer = {
-    enable = true;
-    gpuType = "nvidia";
-  };
 
   environment.systemPackages =
     (with pkgs; [
@@ -108,9 +146,8 @@ in
       zoom-us
       vesktop
       # ========== DEVELOPMENT TOOLS ==========
-      ltspice
+      ltspice-vd # LTSpice wrapped to run in a Wine virtual desktop (see let block)
       obsidian
-      windsurf
       zathura
       # ========== CONTAINERIZATION ==========
       podman-compose

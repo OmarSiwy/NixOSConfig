@@ -3,8 +3,10 @@
 {
   environment.systemPackages = with pkgs; [
     bun
+    gh
+    jq
     nodejs
-    playwright-driver.browsers
+    tmux
 
     # ========== LANGUAGE SERVERS ==========
     lua-language-server
@@ -66,9 +68,5 @@
   environment.variables = {
     NODE_PATH = "${pkgs.nodejs}/lib/node_modules";
     PYTHON3_HOST_PROG = "${pkgs.python3}/bin/python3";
-
-    PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
-    PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
-    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
   };
 }

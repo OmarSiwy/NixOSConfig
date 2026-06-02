@@ -18,6 +18,10 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    codex-cli = {
+      url = "github:sadjow/codex-cli-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
   };
   outputs =
@@ -28,6 +32,7 @@
       home-manager,
       lanzaboote,
       claude-code,
+      codex-cli,
       ...
     }:
     let
@@ -93,6 +98,7 @@
             {
               environment.systemPackages = [
                 claude-code.packages.${system}.claude-code
+                codex-cli.packages.${system}.default
               ];
             }
           )

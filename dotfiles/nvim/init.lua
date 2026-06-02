@@ -18,6 +18,7 @@ require("core.settings") -- Editor settings
 require("core.setups") -- Setup of plugins
 require("core.mappings") -- Mappings
 require("core.scripts") -- Scripts
+require("core.lsp_guard") -- Hard-fail on missing repo LSPs
 
 require("plugins.lsp-config-setup") -- LSP configuration
 require("plugins.nvim-cmp") -- Autocompletion

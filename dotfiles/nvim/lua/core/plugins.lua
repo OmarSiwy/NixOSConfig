@@ -3,13 +3,11 @@
 return {
 	-------- Appearance
 	{
-		"catppuccin/nvim",
-		name = "catppuccin",
+		"embark-theme/vim",
+		name = "embark",
 		priority = 1000,
 		lazy = false,
 	},
-
-	"folke/tokyonight.nvim",
 
 	"goolord/alpha-nvim", -- Startup screen
 	"nvim-lualine/lualine.nvim", -- Status line
@@ -90,38 +88,4 @@ return {
 	},
 	"github/copilot.vim",
 	"andweeb/presence.nvim",
-	{
-		"yetone/avante.nvim",
-		event = "VeryLazy",
-		version = false,
-		build = "make",
-		opts = {
-			provider = "openai",
-			windows = {
-				position = "left",
-			},
-		},
-		dependencies = {
-			"nvim-lua/plenary.nvim",
-			"MunifTanjim/nui.nvim",
-			"nvim-tree/nvim-web-devicons",
-			"nvim-treesitter/nvim-treesitter",
-			{
-				"HakonHarnes/img-clip.nvim",
-				event = "VeryLazy",
-				opts = {
-					default = {
-						embed_image_as_base64 = false,
-						prompt_for_file_name = false,
-						drag_and_drop = { insert_mode = true },
-					},
-				},
-			},
-			{
-				"MeanderingProgrammer/render-markdown.nvim",
-				opts = { file_types = { "markdown", "Avante" } },
-				ft = { "markdown", "Avante" },
-			},
-		},
-	},
 }

@@ -74,6 +74,10 @@ light -S $(light -G)
 killall nm-applet
 nm-applet --indicator &
 
+# Clipboard persistence for Wayland selections copied via wl-copy
+killall wl-clip-persist 2>/dev/null || true
+wl-clip-persist --clipboard regular &
+
 # ═══════════════════════════════════════════
 # NOTIFICATIONS
 # ═══════════════════════════════════════════

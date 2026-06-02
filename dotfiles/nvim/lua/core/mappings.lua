@@ -51,14 +51,8 @@ kmap.set("n", "<leader>rf", extensions.recent_files.pick, {})
 kmap.set("n", "<leader>fm", extensions.vim_bookmarks.all, {})
 kmap.set("n", "<leader>fm-", extensions.vim_bookmarks.current_file, {})
 
--- Avante (AI - Cursor-like)
-kmap.set({ "n", "v" }, "<leader>aa", "<cmd>AvanteAsk<cr>", { desc = "AI: Ask" })
-kmap.set({ "n", "v" }, "<leader>ae", "<cmd>AvanteEdit<cr>", { desc = "AI: Edit selection" })
-kmap.set("n", "<leader>ar", "<cmd>AvanteRefresh<cr>", { desc = "AI: Refresh" })
-kmap.set("n", "<leader>at", "<cmd>AvanteToggle<cr>", { desc = "AI: Toggle sidebar" })
-
 vim.g.copilot_no_tab_map = true
-kmap.set("i", "<A-l>", 'copilot#Accept("")', {
+kmap.set("i", "<A-a>", 'copilot#Accept("")', {
 	expr = true,
 	replace_keycodes = false,
 	desc = "Copilot: Accept suggestion",

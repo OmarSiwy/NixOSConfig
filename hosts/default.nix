@@ -41,6 +41,17 @@
   # Machine-specific settings
   networking.hostName = username;
 
+  # Keep the base system lean: drop optional default packages and local docs.
+  environment.defaultPackages = [ ];
+  documentation = {
+    enable = false;
+    man.enable = false;
+    info.enable = false;
+    doc.enable = false;
+    dev.enable = false;
+    nixos.enable = false;
+  };
+
   # Driver configuration
   drivers = {
     amdgpu.enable = false;

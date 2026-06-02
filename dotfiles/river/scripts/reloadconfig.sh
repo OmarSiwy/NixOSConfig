@@ -2,18 +2,17 @@
 echo "🔄 Reloading configurations..."
 set -e
 
+REPO_DIR="/home/omare/Documents/Desktop/nixos"
+CONFIG_DIR="/home/omare/.config"
+CACHE_DIR="/home/omare/.cache"
+STATE_DIR="/home/omare/.local/state"
+
 echo '📁 Removing old configs...'
-rm -rf ~/.config/{fastfetch,ghostty,kanshi,rill,mako,nvim,river,rofi,waybar,xdg-desktop-portal-wlr}
+mkdir -p "$CONFIG_DIR"
+rm -rf "$CONFIG_DIR"/{fastfetch,ghostty,kanshi,rill,mako,nvim,river,rofi,waybar,xdg-desktop-portal-wlr}
 
 echo '📋 Copying new dotfiles...'
-cp -r $HOME/Documents/nixos/dotfiles/* ~/.config/
-
-echo '🤖 Linking Claude Code skills...'
-mkdir -p ~/.claude/skill-repos
-rm -rf ~/.claude/skill-repos/mattpocock-skills
-ln -sf $HOME/Documents/nixos/claude_skills/mattpocock-skills ~/.claude/skill-repos/mattpocock-skills
-rm -rf ~/.claude/skills
-bash $HOME/Documents/nixos/claude_skills/mattpocock-skills/scripts/link-skills.sh
+cp -r "$REPO_DIR"/dotfiles/* "$CONFIG_DIR"/
 
 echo '🔪 Killing running applications...'
 pkill waybar || true
@@ -24,13 +23,13 @@ pkill waybar || true
 pkill awww-daemon || true
 
 echo '🧹 Removing state/cache...'
-rm -rf ~/.cache/{fastfetch,ghostty,nvim,rofi,awww}
-rm -rf ~/.local/state/{nvim,ghostty}
+rm -rf "$CACHE_DIR"/{fastfetch,ghostty,nvim,rofi,awww}
+rm -rf "$STATE_DIR"/{nvim,ghostty}
 
 echo ''
 if pgrep -x river >/dev/null; then
     echo "  • Restarting system services (wallpaper, waybar, etc.)..."
-    bash "$HOME/.config/river/scripts/process.sh" &
+    bash "/home/omare/.config/river/scripts/process.sh" &
     echo "    ✓ process.sh restarted"
 else
     echo "  • River: Not running"
