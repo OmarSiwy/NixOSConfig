@@ -39,6 +39,13 @@ in
     };
     extraConfig = ''
       c.qt.args += ["widevine-path=${pkgs.widevine-cdm}/share/google/chrome/WidevineCdm/_platform_specific/linux_x64/libwidevinecdm.so"]
+      # QtWebEngine's GPU process corrupts video tiles on native Wayland with this
+      # NVIDIA GPU, and crashes on interaction when forced through XWayland.
+      # Disabling the GPU process (Skia software raster) sidesteps both: clean
+      # video + no crashes, on native Wayland — no xcb/XWayland, no DISPLAY hack.
+      # force_software_rendering "chromium" == --disable-gpu. Costs some CPU on
+      # heavy pages/video; no quality loss.
+      c.qt.force_software_rendering = "chromium"
     '';
   };
 

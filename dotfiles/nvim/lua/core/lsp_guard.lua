@@ -7,6 +7,7 @@ local specs = {
 	rust = {
 		label = "Rust",
 		server = "rust_analyzer",
+		exe = "rust-analyzer",
 		project_root = { "Cargo.toml", "rust-project.json" },
 		repo_root = { ".git", "Cargo.toml", "rust-project.json" },
 	},
@@ -118,9 +119,10 @@ local function ensure_repo_lsp(bufnr)
 		return
 	end
 
-	local server_path = vim.fn.exepath(spec.server)
+	local exe = spec.exe or spec.server
+	local server_path = vim.fn.exepath(exe)
 	if server_path == "" then
-		hard_fail(bufnr, string.format("%s project detected at %s, but `%s` is not on PATH", spec.label, project_root, spec.server))
+		hard_fail(bufnr, string.format("%s project detected at %s, but `%s` is not on PATH", spec.label, project_root, exe))
 		return
 	end
 

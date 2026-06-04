@@ -59,6 +59,10 @@ in
 
       nvidiaSettings = true;
 
+      # Stable production driver. (The qutebrowser tile corruption was NOT a
+      # driver bug — it reproduced identically on 580 and 595 — it was the
+      # QtWebEngine GPU process on this NVIDIA GPU; fixed by disabling that GPU
+      # process via software rendering in home/default.nix.)
       package = config.boot.kernelPackages.nvidiaPackages.stable;
     };
   };
