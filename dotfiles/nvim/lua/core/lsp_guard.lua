@@ -69,8 +69,25 @@ local function hard_fail(bufnr, message)
 			return
 		end
 
-		vim.api.nvim_err_writeln("LSP guard: " .. message)
-		vim.cmd("cquit 1")
+		local warning_lines = {
+			"",
+			"╔══════════════════════════════════════════════════════════════════╗",
+			"║                    ⚠  LSP GUARD WARNING  ⚠                     ║",
+			"╠══════════════════════════════════════════════════════════════════╣",
+			"║                                                                ║",
+			"║  " .. message,
+			"║                                                                ║",
+			"║  No LSP features (completions, diagnostics, go-to-def, etc.)   ║",
+			"║  will be available for this buffer.                             ║",
+			"║                                                                ║",
+			"╚══════════════════════════════════════════════════════════════════╝",
+			"",
+		}
+		vim.api.nvim_echo(
+			vim.tbl_map(function(line) return { line .. "\n", "WarningMsg" } end, warning_lines),
+			true,
+			{}
+		)
 	end)
 end
 
@@ -170,4 +187,4 @@ vim.api.nvim_create_autocmd("BufWipeout", {
 
 vim.api.nvim_create_user_command("LspGuardCheck", function()
 	ensure_repo_lsp(vim.api.nvim_get_current_buf())
-end, { desc = "Fail hard if the current repo buffer is missing its required LSP" })
+end, { desc = "Warn if the current repo buffer is missing its required LSP" })

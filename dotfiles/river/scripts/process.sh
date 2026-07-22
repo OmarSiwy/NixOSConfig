@@ -11,11 +11,31 @@ kanshi &
 sleep 0.2
 
 # ═══════════════════════════════════════════
-# STATUS BAR - WAYBAR (start early — only needs kanshi, not wallpaper)
+# SHELL DOCK - EWW (slim strip + hover panel; replaces waybar)
 # ═══════════════════════════════════════════
-killall waybar 2>/dev/null || true
+# `eww kill`, not `killall eww`: on NixOS the daemon's comm is `.eww-wrapped`
+# (same wrapper gotcha as awww-daemon below), so killall's exact match no-ops
+# and leaves a stale daemon with the old config running.
+eww kill 2>/dev/null || true
+rm -f /run/user/"$(id -u)"/eww-server_* 2>/dev/null
 sleep 0.2
-waybar &
+# `eww daemon` daemonizes and only returns once its IPC socket is ready, so no
+# `&`/sleep race: backgrounding it meant `eww open` could fire before the socket
+# existed, spawn a second competing daemon, and silently drop the windows.
+eww daemon
+# One dock + strut per connected output — eww has no "all monitors" flag, so we
+# open a uniquely-id'd instance per screen index (--screen overrides :monitor).
+# strut = invisible exclusive lane that indents tiled windows past the strip.
+# ponytail: dock_hover is one global var, so hovering any strip reveals the panel
+# on every monitor. Per-monitor hover needs dock_hover_$i — add if it annoys.
+nout=$(wlr-randr 2>/dev/null | grep -cE '^[^ ]'); [ "${nout:-0}" -ge 1 ] || nout=1
+for i in $(seq 0 $((nout - 1))); do
+  eww open dock  --id "dock-$i"  --screen "$i"
+  eww open strut --id "strut-$i" --screen "$i"
+  # tray opened last so it maps above the dock at the right edge (both overlay
+  # layer) — keeps the tray icons clickable and their right-click menu stable.
+  eww open tray  --id "tray-$i"  --screen "$i"
+done
 
 # ═══════════════════════════════════════════
 # AUDIO SERVER

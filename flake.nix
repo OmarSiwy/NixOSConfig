@@ -22,7 +22,6 @@
       url = "github:sadjow/codex-cli-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
   };
   outputs =
     inputs@{
@@ -48,11 +47,11 @@
         inherit system;
         specialArgs = { inherit inputs username pkgs-stable; };
         modules = [
-          ./hosts
+          ./system
           { nixpkgs.config.allowUnfree = true; }
           {
             nixpkgs.overlays = [
-              (import ./hosts/overlays/river.nix)
+              (import ./system/overlays/river.nix)
               # Suppress "xorg.lndir has been renamed to lndir" deprecation warning
               (final: prev: {
                 xorg = prev.xorg // {
@@ -76,9 +75,6 @@
               users.${username} = import ./home;
             };
           }
-          inputs.chaotic.nixosModules.nyx-overlay
-          inputs.chaotic.nixosModules.nyx-cache
-          { chaotic.nyx.cache.enable = false; } # nyx.chaotic.cx is down (HTTP 525)
           lanzaboote.nixosModules.lanzaboote
           (
             { lib, pkgs, ... }:

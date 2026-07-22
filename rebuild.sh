@@ -13,13 +13,13 @@ echo ''
 
 echo '📁 Removing old configs...'
 mkdir -p ~/.config
-rm -rf ~/.config/{fastfetch,ghostty,kanshi,mako,nvim,rill,river,rofi,waybar}
+rm -rf ~/.config/{fastfetch,ghostty,kanshi,mako,nvim,rill,river,eww,fuzzel,zathura}
 
 echo '📋 Copying dotfiles...'
 cp -r "$FLAKE_DIR"/dotfiles/* ~/.config/
 
 echo '🧹 Cleaning caches...'
-rm -rf ~/.cache/{fastfetch,ghostty,nvim,rofi,swaybg}
+rm -rf ~/.cache/{fastfetch,ghostty,nvim,swaybg}
 rm -rf ~/.local/state/{nvim,ghostty}
 
 echo '🚀 Running nixos-rebuild...'

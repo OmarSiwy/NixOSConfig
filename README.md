@@ -1,5 +1,7 @@
 # NixOS Configuration
 
+![Desktop](assets/desktop.png)
+
 NixOS + Home Manager flake using River (Wayland compositor), and rill (scrolling window manager).
 
 ## Structure

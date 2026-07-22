@@ -25,8 +25,8 @@
     .keybindings = .{
         // -- App launchers --
         .{ .key = "Return", .modifiers = .{ .mod4 = true },                .action = .{ .spawn = .{"ghostty"} } },
-        .{ .key = "d",      .modifiers = .{ .mod4 = true },                .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/rofi/launcher/launcher.sh" } } },
-        .{ .key = "p",      .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/rofi/powermenu/powermenu.sh" } } },
+        .{ .key = "d",      .modifiers = .{ .mod4 = true },                .action = .{ .spawn = .{"fuzzel"} } },
+        .{ .key = "p",      .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/fuzzel/powermenu.sh" } } },
 
         // -- Screenshots --
         // Super+Shift+S -> area screenshot to clipboard
@@ -89,8 +89,8 @@
         .{ .key = "k", .modifiers = .{ .mod4 = true, .shift = true }, .action = .move_window_to_output_right },
 
         // -- Session --
-        .{ .key = "r", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/river/scripts/reloadconfig.sh" } } },
-        .{ .key = "r", .modifiers = .{ .mod4 = true }, .action = .reload_config },
+        .{ .key = "r", .modifiers = .{ .mod4 = true }, .action = .{ .spawn = .{ "setsid", "sh", "-c", "$HOME/.config/river/scripts/reloadconfig.sh" } } },
+        .{ .key = "r", .modifiers = .{ .mod4 = true, .shift = true }, .action = .reload_config },
         .{ .key = "e", .modifiers = .{ .mod4 = true, .shift = true }, .action = .exit },
 
         // -- Audio (pamixer) --

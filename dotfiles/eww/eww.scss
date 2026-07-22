@@ -1,0 +1,241 @@
+// ─────────────────────────────────────────────────────────────
+// Egypt — the Pharaohs. National-team palette: black, red, white.
+// NOTE: River has no blur protocol, so backgrounds are translucent
+// but not frosted. Everything else (rounding, cards, pills) is real.
+// ─────────────────────────────────────────────────────────────
+$bg:        rgba(10, 10, 10, 0.92);    // near-black
+$bg-strip:  rgba(10, 10, 10, 0.85);
+$card:      rgba(255, 255, 255, 0.05);
+$card-hi:   rgba(255, 255, 255, 0.10);
+$line:      rgba(255, 255, 255, 0.08);
+
+$fg:        #ffffff;                   // white
+$fg-soft:   #d9d9d9;
+$dim:       #8a8a8a;
+
+$accent:    #ce1126;   // Egyptian flag red
+$accent2:   #ffffff;   // white
+$teal:      #ce1126;
+$green:     #9ece6a;
+$yellow:    #e3a008;
+$red:       #ce1126;
+$dark:      #0a0a0a;
+
+* {
+  all: unset;
+  font-family: "Iosevka Nerd Font";
+  font-size: 14px;
+}
+
+@mixin card {
+  background-color: $card;
+  border: 1px solid $line;
+  border-radius: 18px;
+  padding: 16px;
+}
+@mixin pill {
+  border-radius: 999px;
+}
+
+// ── Slim strip (floating pill on the right edge) ──────────────
+.strip {
+  background-color: $bg-strip;
+  border: 1px solid $line;
+  border-radius: 26px;
+  padding: 16px 0;
+  margin: 6px 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+.clock-mini {
+  .h { font-size: 18px; font-weight: 700; color: $fg; }
+  .m { font-size: 18px; font-weight: 700; color: $accent; }
+}
+.strip-icons {
+  .ic  { font-size: 17px; color: $fg-soft; }
+  .pct { font-size: 9px; color: $dim; margin-top: 1px; }
+  .batt .ic { color: $green; }
+}
+
+// ── Panel ─────────────────────────────────────────────────────
+.panel {
+  min-width: 340px;
+  background-color: $bg;
+  border: 1px solid $line;
+  border-radius: 28px;
+  padding: 22px;
+  margin: 6px 10px 6px 6px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+}
+
+// Header
+.greeting  { font-size: 13px; color: $dim; }
+.big-clock { font-size: 36px; font-weight: 700; color: $fg; }
+.date      { font-size: 13px; color: $fg-soft; margin-top: 2px; }
+.bat-pill {
+  @include pill;
+  background-color: $card;
+  border: 1px solid $line;
+  padding: 6px 12px;
+  .bat-ic  { font-size: 15px; color: $green; }
+  .bat-pct { font-size: 13px; color: $fg-soft; font-weight: 600; }
+  &.low .bat-ic, &.low .bat-pct { color: $red; }
+}
+
+// Cards
+.card { @include card; }
+.card-title {
+  font-size: 11px; font-weight: 700;
+  color: $dim; letter-spacing: 1.5px;
+  margin-bottom: 6px;
+}
+
+// Media
+.cover-ph {
+  min-width: 64px; min-height: 64px;
+  border-radius: 16px;
+  background-image: linear-gradient(135deg, $accent 0%, $accent2 100%);
+}
+.cover-ic { font-size: 30px; color: rgba(255, 255, 255, 0.92); }
+.spotify-ic { color: #1db954; font-size: 14px; }   // Spotify brand green
+.cover    { border-radius: 16px; }
+.track  { font-size: 15px; font-weight: 600; color: $fg; }
+.artist { font-size: 13px; color: $dim; margin-top: 2px; }
+.controls {
+  margin-top: 12px;
+  .ctrl {
+    font-size: 20px; color: $fg-soft;
+    min-width: 40px; min-height: 40px;
+    border-radius: 999px;
+    background-color: $card;
+    &:hover { background-color: $card-hi; color: $fg; }
+  }
+  .play {
+    font-size: 22px; color: $dark;
+    min-width: 52px; min-height: 52px;
+    background-color: $accent;
+    box-shadow: 0 4px 16px rgba(122, 162, 247, 0.4);
+    &:hover { background-color: $teal; }
+  }
+}
+
+// System metrics
+.metric { margin-top: 2px; }
+.metric-ic { font-size: 16px; color: $accent2; }
+.metric label { color: $fg-soft; font-size: 13px; }
+.bar {
+  margin-top: 6px;
+  background-color: rgba(0, 0, 0, 0.35);
+  border-radius: 999px;
+  min-height: 7px;
+  progress {
+    background-image: linear-gradient(to right, $accent, $accent2);
+    border-radius: 999px;
+  }
+}
+
+// Quick toggles
+.toggles .tg {
+  font-size: 18px; color: $dim;
+  min-width: 52px; min-height: 44px;
+  border-radius: 16px;
+  background-color: $card;
+  border: 1px solid $line;
+  &:hover { background-color: $card-hi; color: $fg-soft; }
+  &.on {
+    color: $dark;
+    background-color: $accent;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(122, 162, 247, 0.35);
+  }
+}
+
+// Sound
+.mini-btn {
+  font-size: 12px; color: $fg-soft;
+  background-color: $card; border: 1px solid $line;
+  padding: 5px 12px; border-radius: 999px;
+  &:hover { background-color: $card-hi; color: $fg; }
+}
+.snd-ic {
+  font-size: 18px; color: $accent;
+  min-width: 36px; min-height: 36px;
+  border-radius: 999px; background-color: $card;
+  &:hover { background-color: $card-hi; }
+}
+.vol-pct { font-size: 12px; color: $dim; min-width: 36px; }
+scale.vol-scale {
+  trough {
+    background-color: rgba(0, 0, 0, 0.35);
+    border-radius: 999px; min-height: 8px;
+    highlight { background-color: $accent; border-radius: 999px; }
+  }
+  slider {
+    background-color: $fg;
+    border-radius: 999px;
+    min-width: 16px; min-height: 16px;
+    margin: -5px;
+  }
+}
+
+// Power profile
+.profiles .prof {
+  font-size: 13px; color: $fg-soft;
+  background-color: $card; border: 1px solid $line;
+  padding: 10px 8px; border-radius: 14px;
+  &:hover { background-color: $card-hi; color: $fg; }
+  &.on {
+    color: $dark; background-color: $green;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(158, 206, 106, 0.30);
+  }
+}
+
+// Notifications
+.notif-empty { font-size: 13px; color: $dim; }
+.notif {
+  background-color: $card;
+  border: 1px solid $line;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.notif-app { font-size: 11px; color: $accent; font-weight: 600; }
+.notif-sum { font-size: 13px; color: $fg-soft; }
+
+// Power
+.power {
+  font-size: 20px; color: $red;
+  min-width: 48px; min-height: 48px;
+  border-radius: 999px;
+  background-color: rgba(247, 118, 142, 0.12);
+  &:hover { background-color: rgba(247, 118, 142, 0.25); }
+}
+
+// System tray (SNI). The `* { all: unset }` reset above strips the GTK popup
+// menu's default background, so the right-click menu renders invisible (looks
+// like the icon "disappears"). Style menu/menuitem explicitly to bring it back.
+.tray {
+  padding: 4px 0;
+  > image {
+    padding: 4px;
+    border-radius: 8px;
+    &:hover { background-color: $card-hi; }
+  }
+}
+
+menu {
+  background-color: rgba(10, 10, 10, 0.97);
+  border: 1px solid $line;
+  border-radius: 10px;
+  padding: 6px;
+}
+menu menuitem {
+  color: $fg-soft;
+  padding: 6px 14px;
+  border-radius: 6px;
+  &:hover { background-color: $accent; color: $fg; }
+}
+menu separator {
+  background-color: $line;
+  min-height: 1px;
+  margin: 4px 2px;
+}

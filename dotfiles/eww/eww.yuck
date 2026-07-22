@@ -1,0 +1,191 @@
+;; ── Data sources ────────────────────────────────────────────────
+(deflisten media :initial '{"status":"","title":"Nothing playing","artist":"","art":""}'
+  "/home/omare/.config/eww/scripts/media.sh")
+(defpoll sys :interval "3s" :initial '{"cpu":0,"mem":0,"temp":0}'
+  "/home/omare/.config/eww/scripts/sysinfo.sh")
+(defpoll st  :interval "2s" :initial '{"vol":0,"muted":false,"bcap":0,"charging":false,"net":"","bt":"off","dnd":false}'
+  "/home/omare/.config/eww/scripts/status.sh")
+(defpoll clk  :interval "10s" "date '+%H:%M'")
+(defpoll cdate :interval "60s" "date '+%a, %b %d'")
+(defpoll greeting :interval "300s"
+  "h=$(date +%H); if [ $h -lt 12 ]; then echo 'Good morning'; elif [ $h -lt 18 ]; then echo 'Good afternoon'; else echo 'Good evening'; fi")
+(defpoll prof :interval "5s" "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null")
+(defpoll notifs :interval "3s" :initial "[]" "/home/omare/.config/eww/scripts/notifs.sh")
+
+;; Hover state: drives the slide-out panel (shared by strip + panel eventboxes).
+(defvar dock_hover false)
+
+;; ── Slim always-on strip (right edge) ───────────────────────────
+(defwidget strip []
+  (box :class "strip" :orientation "v" :space-evenly false :valign "fill" :vexpand true
+    (box :class "clock-mini" :orientation "v" :space-evenly false
+      (label :class "h" :text {substring(clk, 0, 2)})
+      (label :class "m" :text {substring(clk, 3, 2)}))
+    (box :vexpand true)
+    (box :class "strip-icons" :orientation "v" :space-evenly false :spacing 14
+      (label :class "ic" :text {st.net != "Disconnected" ? "" : "󰖪"})
+      (label :class "ic" :text {st.bt == "off" ? "󰂲" : st.bt == "connected" ? "󰂱" : "󰂯"})
+      (label :class "ic" :text {st.muted ? "󰖁" : "󰕾"})
+      (box :class "batt" :orientation "v" :space-evenly false
+        (label :class "ic" :text {st.charging ? "󰂄" : st.bcap <= 15 ? "󰁻" : st.bcap <= 40 ? "󰁾" : "󰁹"})
+        (label :class "pct" :text "${st.bcap}")))))
+
+;; ── Full panel (revealed on hover) ──────────────────────────────
+(defwidget metric [icon name val]
+  (box :class "metric" :orientation "h" :space-evenly false :spacing 10
+    (label :class "metric-ic" :text icon)
+    (box :orientation "v" :space-evenly false :hexpand true
+      (box :orientation "h" :space-evenly false
+        (label :halign "start" :hexpand true :text name)
+        (label :halign "end" :text "${val}%"))
+      (progress :class "bar" :value val :orientation "h"))))
+
+(defwidget panel []
+  (box :class "panel" :orientation "v" :space-evenly false :spacing 16
+    ;; Header
+    (box :class "header" :orientation "h" :space-evenly false :valign "start"
+      (box :orientation "v" :space-evenly false :hexpand true
+        (label :class "greeting" :halign "start" :text greeting)
+        (label :class "big-clock" :halign "start" :text clk)
+        (label :class "date" :halign "start" :text cdate))
+      (box :class {st.bcap <= 15 ? "bat-pill low" : "bat-pill"} :valign "start" :space-evenly false :spacing 6
+        (label :class "bat-ic" :text {st.charging ? "󰂄" : st.bcap <= 15 ? "󰁻" : st.bcap <= 40 ? "󰁾" : "󰁹"})
+        (label :class "bat-pct" :text "${st.bcap}%")))
+
+    ;; Media
+    (box :class "card" :orientation "v" :space-evenly false :spacing 10
+      (box :class "card-title" :orientation "h" :halign "start" :space-evenly false :spacing 8
+        (label :class "spotify-ic" :text "")
+        (label :text "NOW PLAYING"))
+      (box :orientation "h" :space-evenly false :spacing 12
+        ;; Cover art disabled: eww's gdk-pixbuf on NixOS won't render the
+        ;; converted PNG reliably, so just show the gradient + note tile.
+        (box :class "cover-ph" (label :class "cover-ic" :text "󰝚"))
+        (box :orientation "v" :space-evenly false :valign "center" :hexpand true
+          (label :class "track"  :halign "start" :limit-width 22 :text {media.title})
+          (label :class "artist" :halign "start" :limit-width 24 :text {media.artist})))
+      (box :class "controls" :halign "center" :spacing 22
+        (button :class "ctrl" :onclick "playerctl previous" "󰒮")
+        (button :class "ctrl play" :onclick "playerctl play-pause"
+          {media.status == "Playing" ? "󰏤" : "󰐊"})
+        (button :class "ctrl" :onclick "playerctl next" "󰒬")))
+
+    ;; System
+    (box :class "card" :orientation "v" :space-evenly false :spacing 10
+      (label :class "card-title" :halign "start" :text "SYSTEM")
+      (metric :icon "󰻠" :name "CPU" :val {sys.cpu})
+      (metric :icon "󰍛" :name "Memory" :val {sys.mem})
+      (box :orientation "h" :space-evenly false :spacing 10
+        (label :class "metric-ic" :text "")
+        (label :halign "start" :hexpand true :text "Temperature")
+        (label :halign "end" :text "${sys.temp}°C")))
+
+    ;; Quick toggles  (bluetooth: left-click opens manager, right-click toggles power)
+    (box :class "card" :orientation "v" :space-evenly false :spacing 8
+      (label :class "card-title" :halign "start" :text "QUICK TOGGLES")
+      (box :class "toggles" :halign "center" :spacing 12
+        (button :class {st.net != "Disconnected" ? "tg on" : "tg"} :onclick "setsid -f ghostty -e nmtui"
+                {st.net != "Disconnected" ? "󰖩" : "󰖪"})
+        (button :class {st.bt != "off" ? "tg on" : "tg"}
+                :onclick "setsid -f blueman-manager"
+                :onrightclick "setsid -f /home/omare/.config/eww/scripts/bt-toggle.sh" "󰂯")
+        (button :class {st.dnd ? "tg on" : "tg"} :onclick "makoctl mode -t do-not-disturb" "󰂚")))
+
+    ;; Sound  (slider sets volume live; mute icon + full mixer)
+    (box :class "card" :orientation "v" :space-evenly false :spacing 10
+      (box :orientation "h" :space-evenly false
+        (label :class "card-title" :halign "start" :hexpand true :text "SOUND")
+        (button :class "mini-btn" :onclick "setsid -f pavucontrol" "󰒖  Mixer"))
+      (box :orientation "h" :space-evenly false :spacing 12
+        (button :class "snd-ic" :onclick "pamixer -t" {st.muted ? "󰖁" : "󰕾"})
+        (scale :class "vol-scale" :hexpand true :value {st.vol} :min 0 :max 101
+               :onchange "pamixer --set-volume {}")
+        (label :class "vol-pct" :text "${st.vol}%")))
+
+    ;; Power profile  (CPU governor; needs the sudo helper from services.nix)
+    (box :class "card" :orientation "v" :space-evenly false :spacing 10
+      (label :class "card-title" :halign "start" :text "POWER PROFILE")
+      (box :class "profiles" :space-evenly true :spacing 10
+        (button :class {prof == "performance" ? "prof on" : "prof"}
+                :onclick "sudo set-powerprofile performance" "󰓅  Performance")
+        (button :class {prof == "powersave" ? "prof on" : "prof"}
+                :onclick "sudo set-powerprofile powersave" "󰌪  Power-saver")))
+
+    ;; Notifications (recent, from makoctl history)
+    (box :class "card" :orientation "v" :space-evenly false :spacing 8
+      (box :orientation "h" :space-evenly false
+        (label :class "card-title" :halign "start" :hexpand true :text "NOTIFICATIONS")
+        (button :class "mini-btn" :onclick "setsid -f /home/omare/.config/eww/scripts/clear-notifs.sh" "󰎟  Clear"))
+      (label :class "notif-empty" :halign "start" :visible {arraylength(notifs) == 0}
+             :text "Nothing recent")
+      (scroll :vscroll true :height 200 :visible {arraylength(notifs) > 0}
+        (box :orientation "v" :space-evenly false :spacing 6
+          (for n in notifs
+            (box :class "notif" :orientation "v" :space-evenly false
+              (label :class "notif-app" :halign "start" :text {n.app})
+              (label :class "notif-sum" :halign "start" :limit-width 34 :wrap true :text {n.summary}))))))
+
+    (box :vexpand true)
+    (box :halign "center"
+      (button :class "power" :onclick "setsid -f /home/omare/.config/fuzzel/powermenu.sh" "⏻"))))
+
+;; ── Window ──────────────────────────────────────────────────────
+;; ONE content-sized window: slim strip always visible on the right, the full
+;; panel slides out to its left on hover. Single eventbox = no flicker. No
+;; fixed width, so when collapsed the window is just the strip (never an empty
+;; rectangle); when expanded it grows to fit the panel.
+(defwidget dock []
+  (eventbox :onhover "eww update dock_hover=true"
+            :onhoverlost "eww update dock_hover=false"
+    (box :orientation "h" :space-evenly false :valign "fill"
+      (revealer :transition "slideleft" :reveal dock_hover :duration "250ms"
+        (panel))
+      (strip))))
+
+(defwindow dock
+  :monitor 0
+  ;; :x "-52px" overlaps the strut's reserved lane (negative gtk-layer-shell
+  ;; margin) so the visible strip sits at the true right edge instead of being
+  ;; pushed left of the lane it reserved. Keep this == the strut width below.
+  :geometry (geometry :x "-35px" :height "94%" :anchor "center right")
+  :stacking "overlay"
+  :exclusive false
+  :focusable "ondemand"
+  (dock))
+
+;; ── System tray ─────────────────────────────────────────────────
+;; eww is the StatusNotifierHost itself (no waybar). Its OWN window, NOT inside
+;; the hover dock: if it lived in the dock, right-clicking an icon would hover
+;; the dock, reveal the panel, resize the window, and drag the open menu around.
+;; A separate static window over the strip's empty middle never resizes, so the
+;; right-click menu (where Quit lives) stays put. Left-click activates.
+;; ponytail: x/height eyeballed to sit over the strip's middle band — nudge if
+;; the icons don't line up with the strip column.
+(defwidget tray []
+  (systray :class "tray" :orientation "v" :spacing 14 :icon-size 18 :prepend-new false))
+
+(defwindow tray
+  :monitor 0
+  ;; Explicit width pins it to the right edge — without it the systray hexpands
+  ;; the window full-width and the right anchor reads as screen-centre. x must
+  ;; match the strut width (-35px) to overlap the reserved lane and land ON the
+  ;; strip; a smaller offset leaves it floating left of the bar.
+  :geometry (geometry :x "-35px" :width "36px" :height "44%" :anchor "center right")
+  :stacking "overlay"
+  :exclusive false
+  :focusable "ondemand"
+  (box :halign "center" :valign "center" (tray)))
+
+;; ── Exclusive strut ─────────────────────────────────────────────
+;; The visible dock floats as an overlay and expands on hover, so it can't
+;; reserve space itself (the reserved zone would jump on every hover). This
+;; invisible sibling reserves a fixed slim lane on the laptop's right edge,
+;; so rill's tiling indents windows past the strip instead of under it.
+;; ponytail: fixed 52px ≈ strip pill + margins; bump if the strip ever widens.
+(defwindow strut
+  :monitor 0
+  :geometry (geometry :width "35px" :height "100%" :anchor "center right")
+  :stacking "bottom"
+  :exclusive true
+  :focusable false
+  (box))
