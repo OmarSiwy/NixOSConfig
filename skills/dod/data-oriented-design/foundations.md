@@ -1,16 +1,9 @@
 # Foundations: Data-Oriented Design, Negative-Overhead Abstraction, and API Design
 
-This is the theory document. It is language-agnostic. The companion documents
-(rust.md, zig.md) show how to realize each idea in a specific language. Read this
-first; it defines the vocabulary the other two assume.
-
-The three bodies of work covered here are usually presented as rivals. They are not.
-Data-oriented design tells you to design from the data. Negative-overhead abstraction
-tells you that clean structure need not cost anything at runtime if the compiler can
-see through it. Muratori's API work tells you to expose the data and the primitives and
-let convenience sit on top. All three converge on the same posture: **transparent data,
-primitives first, abstraction discovered by compression, decisions verified by
-measurement.**
+The theory document, language-agnostic; the companions (rust.md, zig.md) show how to
+realize each idea. The three bodies of work here are usually presented as rivals. They
+are not — all three converge on one posture: **transparent data, primitives first,
+abstraction discovered by compression, decisions verified by measurement.**
 
 ---
 
@@ -153,32 +146,19 @@ hand-written version).
   loop vectorizes), producing machine code _faster_ than naive primitive-level code a
   person would typically write.
 
-### What is genuinely valuable in "Clean Code"
+### The data/object anti-symmetry (Clean Code, Ch. 6)
 
-Robert C. Martin's book contains durable, local craft that survives the performance
-critique completely intact:
-
-- **Meaningful names** and intention-revealing code, so comments rarely need to explain
-  _what_.
-- **Cohesion**: a function/module should do one conceptual thing, so you can hold it in
-  your head. (Cohesion — not a line count.)
-- **Clear, explicit error handling** as a first-class concern.
-- **Clean boundaries** between your code and third-party code.
-
-Most importantly, the book contains an idea that is _directly_ data-oriented and is
-usually overlooked: the **data/object anti-symmetry** (Chapter 6). Martin distinguishes
+The one directly data-oriented idea in Martin's book, usually overlooked. He
+distinguishes
 
 - **objects**, which hide their data behind abstractions and expose behavior, from
-- **data structures**, which expose their data and have essentially no behavior.
+- **data structures**, which expose their data and have essentially no behavior,
 
 and observes the trade-off: procedural code over _data structures_ makes it easy to add
 new operations without touching the structures, while object-oriented code makes it
 easy to add new types without touching existing operations. DOD lives almost entirely
-in Martin's "data structure" quadrant: transparent data, with transformations written
-as free functions over it. So the book itself tells you when to reach for plain,
-transparent data — exactly DOD's posture — rather than for an object. The Law of
-Demeter and the advice against hybrid structures point the same way: don't grow
-behavior on the things that are really just data.
+in the "data structure" quadrant: transparent data, with transformations written as
+free functions over it. Don't grow behavior on the things that are really just data.
 
 ### Where "Clean Code" misleads if applied as dogma
 
@@ -198,15 +178,6 @@ data:
   invariant add friction and zero safety, and they make the SoA/transparent-data
   transformation harder.
 
-### The synthesis
-
-The target is the intersection: abstractions that are **clean** (good names, cohesive,
-honest error handling), **transparent to the optimizer** (monomorphized generics,
-inlined iterators, compile-time computation, zero-sized type markers), and **aligned
-with the data** (transparent structures, batch-shaped). In a language with
-monomorphization and aggressive inlining, "clean," "expressive," and "optimal" are very
-often the _same_ source code, not points on a trade-off curve.
-
 ### The discipline that keeps this honest
 
 Zero-cost is a goal, not a guarantee. A newtype can occasionally defeat
@@ -220,20 +191,23 @@ assumed.
 
 ## Part III — API Design (Casey Muratori)
 
-### Origin and stance
-
-Muratori's API principles come from designing and maintaining Granny 3D, a licensed
-animation runtime that shipped in thousands of titles over more than a decade. The
-context matters: a _reusable component_ (his term, vs. a "layer"/"leaf" technology) is
-one that integrates deep inside someone else's architecture with non-trivial feedback.
-That is the hardest case, and it forces a discipline most APIs skip.
-
 ### Method: write the usage code first
 
 Before implementing anything, write the code you _wish_ you could call. The API is then
 defined by the call site, not by the implementer's mental model. This is the single
-highest-leverage practice, and it composes with semantic compression (below): you write
-concrete usage, then compress.
+highest-leverage practice, and it composes with compression (below): you write concrete
+usage, then compress.
+
+```rust
+// STEP 1: Write the usage you want
+let img = load_png("input.png");
+let gray = to_grayscale(&img);
+let edges = detect_edges(&gray, 1.4);
+save_png(&edges, "output.png");
+
+// STEP 2: Only now implement load_png, to_grayscale, etc.
+// STEP 3: If detect_edges and to_grayscale share a per-pixel loop, compress into one
+```
 
 ### The five characteristics (the evaluation framework)
 
@@ -276,145 +250,13 @@ inside an arena, on the stack, or in a hot loop without forking it.
 
 The architecture should _emerge_. Write the concrete code first; then act like a
 compressor on your own source — factor out the patterns that have genuinely repeated,
-and only those. A little duplication is cheaper than the wrong abstraction; two blocks
-that merely look alike but evolve differently were never the same thing. Abstractions
+and only those. If a pattern appears once, inline it. Twice, watch it. Three times,
+compress. A little duplication is cheaper than the wrong abstraction; two blocks that
+merely look alike but evolve differently were never the same thing. Abstractions
 discovered by compression are tight, used in many places, and map to real structure —
 which is exactly the kind of abstraction a compiler also optimizes well.
 
 ---
 
-## Coda — why the three are one posture
-
-- DOD says: **understand and design from the data**; layout follows access pattern.
-- Negative-overhead abstraction says: **you can keep clean structure for free** when the
-  abstraction is transparent to the compiler — so don't pay the OOP tax, and don't fear
-  the abstraction either.
-- Muratori says: **expose the data and the primitives**, keep the common path short,
-  let the caller own memory, and grow abstractions by compression.
-
-Transparent data, primitives first, convenience layered on top, abstraction by
-compression, every performance claim measured. The companion documents implement this
-in Zig and in Rust.
-
----
-
-# Operational dimensions
-
-The three pillars above concern _structure_ — how you shape data, abstraction, and
-interfaces. The four dimensions below concern _operation_: how memory is obtained, how
-work is parallelized, how invariants are made unbreakable, and how the data layout
-finally pays off as vectorized throughput. Each is realized concretely in rust.md and
-zig.md.
-
-## Part IV — Memory and allocation strategy
-
-The single largest avoidable cost in most data-heavy programs is calling the
-general-purpose allocator on a hot path. A general allocator must be correct for every
-size, alignment, lifetime, and thread — that generality is exactly the overhead DOD
-tells you to avoid. The lever is to **match allocator lifetime to data lifetime** and
-stop treating "the heap" as one undifferentiated thing.
-
-**Allocation as an explicit dependency.** The cleanest discipline (Zig enforces it, and
-it is good practice anywhere) is to treat the allocator as a parameter, not a global.
-The code that _uses_ memory should not silently decide _how_ it is obtained; the caller
-chooses the strategy. This is the same idea as Muratori's "resource management is
-optional" and his Retention/Coupling characteristics.
-
-The common strategies, from most to least specialized:
-
-- **Arena / region.** Allocate freely; free everything at once when a _phase_ ends
-  (a frame, a request, a parse). Individual frees are no-ops. This collapses lifetime
-  management to a single `reset`/`deinit` and is often dramatically faster than
-  per-object free. Ideal when many objects share a lifetime.
-- **Pool / freelist.** Fixed-size slots reused in place. O(1) acquire/release, no
-  fragmentation, stable addresses. Ideal for many same-typed objects with individual
-  lifetimes (the index-arena idea from DOD).
-- **Bump / linear.** A pointer that only moves forward. The fastest possible
-  allocation; usually the mechanism _inside_ an arena.
-- **Fixed / stack buffer.** A buffer of known size, no heap at all — for hot paths,
-  embedded, and bounded work. Allocation cannot fail except by exhausting the buffer.
-
-**The principles, independent of language:**
-
-- Reserve capacity up front; a loop that grows a collection element-by-element pays
-  repeated reallocation and copying. Amortize it with one up-front reservation.
-- Don't allocate in the hot loop. Allocate once outside it and reuse the storage
-  (clear-and-reuse retains capacity).
-- The caller owns memory and lifetime wherever feasible — it is what makes a routine
-  usable in an arena, on the stack, or in a tight loop without being rewritten.
-
-## Part V — Concurrency and parallelism
-
-These are different problems (Pike's distinction): **concurrency** is _structuring_ a
-program as independent tasks; **parallelism** is _executing_ work simultaneously on
-multiple cores. A design can be concurrent without being parallel, and vice versa.
-
-- **Data parallelism** is the DOD payoff: the same transformation applied to disjoint
-  partitions of an array, with no inter-element dependencies. This is "embarrassingly
-  parallel" and scales nearly linearly. SoA layout makes the partitions clean.
-- **Task parallelism** runs heterogeneous units of work concurrently; it needs
-  coordination and is where most concurrency bugs live.
-
-The governing rule is **partition, don't share.** Give each worker a disjoint slice it
-owns exclusively; then no synchronization is needed on the data itself. Reach for shared
-mutable state (locks, atomics) only for the irreducible coordination that remains.
-
-Two hazards to design against:
-
-- **Data races are undefined behavior**, not merely bugs — two threads touching the
-  same location with at least one writing, without synchronization. The strongest tools
-  prevent them _at compile time_ (see Part VI; Rust's `Send`/`Sync` is exactly this).
-- **False sharing**: two threads writing _different_ variables that happen to live on
-  the same cache line, forcing the line to ping-pong between cores. The fix is to pad or
-  separate hot per-thread data onto distinct lines.
-
-When you must synchronize, the ladder runs locks → lock-free structures → raw atomics
-with explicit memory ordering, in increasing order of performance and of difficulty to
-get right. And Amdahl's law caps the payoff: the serial fraction bounds the maximum
-speedup, so measure where the time actually goes before parallelizing.
-
-## Part VI — Type-driven design: make illegal states unrepresentable
-
-The correctness counterpart to everything above. The thesis (Yaron Minsky): choose
-representations such that an invalid value _cannot be constructed_, so whole classes of
-bugs become compile errors rather than runtime checks.
-
-- **Parse, don't validate** (Alexis King). Do validation once, at the boundary, and
-  have it _return a refined type_ that carries the proof of validity. Downstream code
-  accepts only the refined type, so it never re-checks and never sees invalid data.
-  Validation that returns a `bool` throws away the information it just learned; parsing
-  keeps it in the type.
-- **Encode invariants in types.** Prefer a sum type (enum/tagged union) over a struct of
-  flags whose combinations are mostly illegal. Use distinct newtypes for IDs, units, and
-  indices so they can't be confused or arithmetic-abused. Use non-empty / non-zero types
-  where zero or empty is meaningless.
-- **This is "encapsulate invariants, not data" turned into compile-time guarantees.**
-  Once data is parsed into the right type, defensive checks downstream disappear.
-
-The payoff is often _negative cost_: a non-zero integer type lets the compiler use the
-zero bit pattern as a niche, so an "optional non-zero integer" is the same size as the
-integer — you get the safety _and_ a smaller representation. Tight, correct
-representations are frequently also the smallest ones, which is exactly what DOD wants.
-
-## Part VII — Data parallelism and SIMD
-
-SIMD — one instruction operating on many lanes at once — is the literal cash-out of
-struct-of-arrays. A contiguous column of values is exactly what loads into a vector
-register; AoS, by contrast, interleaves fields the vector unit doesn't want.
-
-- **Autovectorization** is the compiler doing this for you. It fires when the loop is
-  simple, operates on contiguous data, is light on branches, has no loop-carried
-  dependency it can't reassociate, and (crucially for floating point) is _allowed_ to
-  reassociate. SoA + small elements + no early-exit branch is the recipe that lets it
-  trigger.
-- **Explicit SIMD** (vector types or intrinsics) is what you reach for when
-  autovectorization won't fire — typically because of branches, gathers, or float
-  reassociation the compiler won't perform without permission.
-- **The float caveat.** IEEE 754 makes addition non-associative, so a compiler bound to
-  strict semantics cannot reorder a float reduction into vector lanes without explicit
-  fast-math permission or explicit SIMD. Integer code does not have this problem.
-
-To make a kernel vectorizable: lay data out SoA, remove branches from the inner loop
-(use masks / branchless selects), align the data, and process in chunks of the vector
-width with a scalar remainder. And measure the emitted instructions — SIMD is the most
-over-claimed optimization in practice; confirm the vector ops are actually there.
+The operational realizations — memory and allocation, concurrency, type-driven design,
+SIMD — live in the companions: rust.md and zig.md §6–§9.

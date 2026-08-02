@@ -3,8 +3,8 @@
 Companion to foundations.md. Each section maps a principle to Rust mechanics. A
 recurring theme: several data structures that are _native_ in Zig (MultiArrayList,
 StaticStringMap, packed/bit-level layouts, index arenas) are **not** in Rust's std and
-are supplied by well-established crates. Those are called out explicitly. The last two
-sections cover Rust's intended handling of `Option`/`Result` and errors.
+are supplied by well-established crates. Those are called out explicitly. Sections 4–5
+cover Rust's intended handling of `Option`/`Result` and errors.
 
 ---
 
@@ -138,7 +138,7 @@ trusting "zero-cost" as a slogan.
   to reuse buffers. Offer a `*_into(&mut out)` primitive alongside an allocating
   convenience method.
 - **Transparent data unless there's an invariant.** Plain `pub` fields for field-bags;
-  privacy + methods only where a type maintains an invariant (see §0 of theory). Module
+  privacy + methods only where a type maintains an invariant. Module
   privacy (`pub`, `pub(crate)`) is the real encapsulation unit.
 - **Granularity / build convenience on primitives.** Expose `parse_into(buf, &mut ast)`
   and build `parse(buf) -> Result<Ast>` on top of it; never offer only the coarse call.
@@ -252,8 +252,8 @@ let node = arena.alloc(Node { /* ... */ });   // freed all at once when `arena` 
 - **Swap the global allocator** for multithreaded throughput when profiling shows
   allocator contention: `#[global_allocator]` with `mimalloc` or `jemalloc`.
 
-The principle is unchanged from the theory doc: match allocator lifetime to data
-lifetime, and never allocate in the hot loop when a reused buffer or arena will do.
+The principle: match allocator lifetime to data lifetime, and never allocate in the
+hot loop when a reused buffer or arena will do.
 
 ---
 
@@ -331,32 +331,4 @@ downstream, bugs surfaced at compile time — and frequently a smaller represent
 
 ## 9. SIMD in Rust
 
-- **Autovectorization** works for simple, contiguous, branch-light loops; SoA layout and
-  slice iteration help it fire. The catch from the theory doc bites here: **float
-  reassociation is blocked on stable Rust** (IEEE 754 strictness), so float reductions
-  often won't autovectorize without nightly fast-math intrinsics or explicit SIMD.
-  Integer kernels don't have this problem.
-- **Portable SIMD (`std::simd` / `core::simd`) is still nightly-only** (feature
-  `portable_simd`, tracking issue #86656). It's the nicest API — `f32x8::splat`,
-  `from_array`, lane-wise operators, masks — but it pins you to a nightly toolchain.
-
-```rust
-#![feature(portable_simd)]               // nightly only
-use std::simd::{f32x8, num::SimdFloat};
-let v = f32x8::from_slice(&a[i..]);      // 8 lanes
-let acc = acc + v * v;                   // lane-wise multiply-add
-```
-
-- **Stable options:**
-  - `std::arch` intrinsics — stable on x86/x86-64 (some ARM/AArch64 still nightly),
-    `unsafe`, target-specific, and require runtime feature detection
-    (`is_x86_feature_detected!`) or `#[target_feature]`.
-  - the **`wide`** crate — portable SIMD types that work on stable.
-  - the **`multiversion`** crate — compiles a function for several instruction sets and
-    dispatches at runtime, pairing well with autovectorization.
-  - (Avoid `faster` and `packed_simd` — abandoned / superseded.)
-
-Structure for it exactly as in Zig: SoA columns, branchless kernels (use SIMD masks/
-selects, not `if`), aligned data, chunk-of-width processing with a scalar remainder.
-Verify with `cargo asm` / godbolt — autovectorization is easy to _assume_ and easy to
-silently lose.
+Vectorizing a hot loop is the simd-loops skill's job — its [rust.md](../simd-loops/rust.md) carries the `std::simd` API table, the stable-Rust options, and the target-feature gotchas.

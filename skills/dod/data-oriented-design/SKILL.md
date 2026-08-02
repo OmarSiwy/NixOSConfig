@@ -1,32 +1,25 @@
 ---
 name: data-oriented-design
-description: Data-oriented design principles for code layout and architecture. Enforces SoA layouts, hot/cold splitting, existence-based processing, cache-friendly access, arena allocation, and flat data structures. Use when writing Rust, Zig, or C code; designing entity/component systems; optimizing data layouts; reviewing struct definitions; refactoring OOP code toward data-oriented patterns; or when user mentions DOD, cache performance, SoA, ECS, or data layout.
+description: Data-oriented design for code layout, architecture, and performance. Use when writing Rust, Zig, or C code; designing entity/component systems; choosing or reviewing struct layouts and data structures; optimizing or profiling hot code; or when the user mentions DOD, cache, SoA, ECS, data layout, latency, branch prediction, or profiling.
 ---
 
 # Data-Oriented Design
 
 > "The purpose of all programs is to transform data. If you don't understand the data, you don't understand the problem." — Mike Acton
 
-## When to Use
-
-- Defining structs, components, or entity types
-- Designing systems that process collections of things
-- Refactoring OOP hierarchies or pointer-heavy code
-- Reviewing data layout for performance
-- Writing Zig code (comptime, explicit allocators, SIMD)
-- Any code that iterates over more than ~64 elements
-
 ## Five Questions (answer before writing ANY code)
+
+State each answer explicitly before writing code — five stated answers is the bar; an unanswered question means stop and find out.
 
 1. **What data goes in, what comes out?** State the transformation.
 2. **How many?** Where there is one, there are many. Design for the collection, not the element.
-3. **What's the access pattern?** Which fields are read together, how often, in what order — this decides AoS vs SoA.
+3. **What's the access pattern?** Which fields are read together, how often, in what order — this decides the layout (Rule 2).
 4. **What's the lifetime?** Phase (arena), program (static), or individual (pool). Match allocator to lifetime.
 5. **Is it parallelizable?** Disjoint partitions of the same transformation → design for data parallelism from the start.
 
 ## Core Rules
 
-1. **Know your data first.** Before writing any struct or function, answer the five questions above. Design the layout from those answers.
+1. **Know your data first.** Design the layout from the five answers above.
 
 2. **SoA by default.** Store parallel arrays of each field, not an array of structs. Switch to AoS ONLY when you always access all fields of an entity together in the same loop.
 
@@ -42,6 +35,10 @@ description: Data-oriented design principles for code layout and architecture. E
 
 8. **No hidden control flow.** (Zig/Acton) No virtual dispatch, no operator overloading that hides allocations, no implicit copies. Every branch and allocation visible at the call site.
 
+Before writing or reviewing any struct layout, check it against the anti-patterns in [REFERENCE.md](REFERENCE.md) — each has a BAD/GOOD pair (cold fields in hot lines, existence flags, pointer graphs, per-element dispatch, HashMap-over-array) plus the layout decision table.
+
+Optimizing or profiling hot code → [measurement.md](measurement.md): profile-first workflow, latency costs, branch prediction, false sharing, the optimization decision tree, caller-owns-the-loop.
+
 ## Workflows
 
 ### Designing a New Data Type
@@ -49,7 +46,7 @@ description: Data-oriented design principles for code layout and architecture. E
 - [ ] List every field the type needs
 - [ ] Classify each field: hot (accessed every tick/request) vs cold (occasional)
 - [ ] Group hot fields into a dense struct; cold fields into a separate table
-- [ ] Choose SoA (parallel arrays) unless ALL fields always accessed together
+- [ ] Apply Rule 2 to pick SoA vs AoS
 - [ ] Use indices (u32/u16) into arenas, not pointers or references
 - [ ] Add a generation counter to indices if you need to detect stale handles
 
@@ -57,7 +54,7 @@ description: Data-oriented design principles for code layout and architecture. E
 
 - [ ] Identify the base class hierarchy — flatten it
 - [ ] Replace inheritance with composition: separate data tables per "component"
-- [ ] Replace virtual dispatch with switch on a tag OR separate arrays per type
+- [ ] Replace virtual dispatch: separate arrays per type first; switch on a tag only when kinds are few and bodies small
 - [ ] Replace `HashMap<EntityId, Component>` with a dense packed array + sparse-to-dense map
 - [ ] Delete getters/setters — expose the data directly or use bulk accessors
 
@@ -67,7 +64,7 @@ description: Data-oriented design principles for code layout and architecture. E
 - Sum types over flag-bags: an `enum` over a struct of bools whose combinations are mostly illegal.
 - Newtypes for IDs, units, indices — a `UserId` cannot be confused with a `PostId`.
 - Smallest integer that fits: `u16` if max < 65536, `u8` if max < 256. Never default to `usize`/`u64`.
-- **Encode, don't polymorphize**: closed `enum` + `match` in hot loops. `dyn`/vtable only for genuinely open, cold sets.
+- **Encode, don't polymorphize** — ranked, not interchangeable: existence-based table split (separate array per kind) first; closed `enum` + `match` on a tag only when kinds are few and bodies small; `dyn`/vtable only for genuinely open, cold sets. Ranking rationale: the design-patterns skill.
 
 ## Review Checklist
 
@@ -77,7 +74,7 @@ Run against any code — each a checkable question, no vibes:
 - [ ] **layout** — collections match access pattern; no pointer that could be an index; no bool/rare field in hot struct; no field wider than its max value; no `dyn` in hot loop that could be an enum
 - [ ] **memory** — caller owns allocation; nothing grows element-wise in a loop; nothing allocates per-iteration that an arena or reused buffer could hoist
 - [ ] **parallel** — shared mutable state that could be partitioned; per-thread hot data on separate cache lines
-- [ ] **types** — no flag-bag that should be a sum type; no validation repeated downstream of a boundary that could parse once
+- [ ] **types** — no flag-bag that should be a sum type; boundaries parse once (see Types)
 - [ ] **compression** — no abstraction that wasn't discovered by repetition
 - [ ] **verify** — hot loops confirmed to vectorize, or the blocking branch/access identified
 
@@ -90,6 +87,4 @@ Auto-detect project language, load the companion:
 | Rust | [rust.md](rust.md) | `soa_derive`, `slotmap`, `bumpalo`, `rayon`, `enum` + `match`, `NonZero*` |
 | Zig | [zig.md](zig.md) | `MultiArrayList`, `enum(u32)`, `packed struct`, `ArenaAllocator`, `@Vector` |
 
-See [foundations.md](foundations.md) for the full theoretical grounding (Parts I–VII: Acton, Kelley, Muratori).
-
-See [REFERENCE.md](REFERENCE.md) for extended anti-patterns and Zig-specific guidance.
+See [foundations.md](foundations.md) for the theory (Acton, Kelley, Muratori — Parts I–III).

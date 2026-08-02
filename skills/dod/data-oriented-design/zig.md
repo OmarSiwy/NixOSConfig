@@ -2,8 +2,8 @@
 
 Companion to foundations.md. Target compiler: **0.16.0** (shipped 2026-04-14;
 the release that made I/O an interface and standardized the "unmanaged" containers).
-Each section maps a principle from the theory document to Zig mechanics, then the last
-two sections cover the language's intended handling of optionals and errors.
+Each section maps a principle from the theory document to Zig mechanics; sections 4–5
+cover the language's intended handling of optionals and errors.
 
 A note on 0.16 container init used throughout: unmanaged containers (ArrayList,
 MultiArrayList, etc.) are initialized from the `.empty` constant and take the allocator
@@ -275,8 +275,8 @@ say both things at once.
 
 Zig is the reference implementation of "allocator as an explicit dependency": every
 allocating function takes an `Allocator`, so the caller chooses the strategy and the
-hot-path discipline from the theory doc is enforced by the language rather than left to
-convention.
+hot-path discipline (match allocator lifetime to data lifetime) is enforced by the
+language rather than left to convention.
 
 The 0.16 "Juicy Main" `Init` struct hands you two allocators for free, so you rarely
 construct one by hand in `main`:
@@ -319,6 +319,10 @@ containers (`ensureTotalCapacity`) before a loop instead of growing element-by-e
 and because the allocator is a parameter, you can swap strategies without touching the
 code that uses the memory.
 
+For the leak-freedom discipline — ownership rules, `defer`/`errdefer` pairing, deinit
+completeness, leak testing — use the writing-leak-free-zig skill
+([../writing-leak-free-zig/SKILL.md](../writing-leak-free-zig/SKILL.md)).
+
 ---
 
 ## 7. Concurrency in Zig (0.16, via `std.Io`)
@@ -351,6 +355,11 @@ anything real. For raw threads and primitives, `std.Thread`, `std.Thread.Mutex`,
 right: ask for `async` when you mean "I don't care when this runs," `concurrent` when
 two tasks must run at once or they deadlock.
 
+Partition, don't share: give each task a disjoint chunk it owns exclusively. When two
+threads do write hot per-thread values, keep them on separate cache lines
+(`align(std.atomic.cache_line)`) so the line doesn't ping-pong between cores (false
+sharing).
+
 ---
 
 ## 8. Type-driven design in Zig
@@ -375,32 +384,6 @@ unrepresentable:
 
 ---
 
-## 9. SIMD in Zig: `@Vector`
+## 9. SIMD in Zig
 
-Zig has portable SIMD as a language builtin — no crate, no nightly. `@Vector(n, T)`
-participates in the normal operators lane-wise and compiles to the target's SIMD
-instructions.
-
-```zig
-const V = @Vector(8, f32);
-
-fn dot(a: []const f32, b: []const f32) f32 {
-    var acc: V = @splat(0.0);
-    var i: usize = 0;
-    while (i + 8 <= a.len) : (i += 8) {
-        const va: V = a[i..][0..8].*;     // load 8 contiguous lanes
-        const vb: V = b[i..][0..8].*;
-        acc += va * vb;                   // 8 multiply-adds, one instruction each
-    }
-    var sum = @reduce(.Add, acc);         // horizontal reduce
-    while (i < a.len) : (i += 1) sum += a[i] * b[i];  // scalar remainder
-    return sum;
-}
-```
-
-`@reduce`, `@shuffle`, and `@select` cover horizontal reductions, lane permutation, and
-branchless selection (use `@select` instead of an `if` inside the kernel). SoA layout —
-`MultiArrayList(...).items(.field)` giving a contiguous `[]f32` — feeds `@Vector`
-directly, which is the whole point of laying data out in columns. Process in chunks of
-the vector width, handle the remainder scalar, keep the inner loop branch-free, and
-check the disassembly to confirm the vector instructions emitted.
+Vectorizing a hot loop is the simd-loops skill's job — its [zig.md](../simd-loops/zig.md) carries the `@Vector` builtin table, worked reduce idioms, and the target-CPU gotchas.

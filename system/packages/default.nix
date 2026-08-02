@@ -57,6 +57,21 @@ let
     '';
   };
 
+  # Discord voice (Vesktop/Electron) gets stuck on "DTLS connecting" when
+  # Tailscale is up: WebRTC gathers the tailscale0 100.x candidate and tries
+  # the voice server over the mesh interface, which can't route there. Pin
+  # WebRTC to the default-route interface (wlp8s0) so it ignores tailscale0.
+  # iPad AirPlay->uxplay capture is unaffected (separate path, not WebRTC).
+  vesktop-wrapped = pkgs.symlinkJoin {
+    name = "vesktop-wrapped";
+    paths = [ pkgs.vesktop ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/vesktop \
+        --add-flags "--force-webrtc-ip-handling-policy=default_public_interface_only"
+    '';
+  };
+
 in
 {
   imports = [
@@ -121,7 +136,7 @@ in
       # ── Communication ──
       slack
       teams-for-linux
-      vesktop
+      vesktop-wrapped # Discord, WebRTC pinned to default iface (see let-binding)
       obsidian
 
       # ── Containerization ──

@@ -52,6 +52,18 @@
           {
             nixpkgs.overlays = [
               (import ./system/overlays/river.nix)
+              # ani-cli 5.0 (nixpkgs is on 4.14) — drop once nixpkgs catches up
+              (final: prev: {
+                ani-cli = prev.ani-cli.overrideAttrs (old: rec {
+                  version = "5.0";
+                  src = prev.fetchFromGitHub {
+                    owner = "pystardust";
+                    repo = "ani-cli";
+                    tag = "v${version}";
+                    hash = "sha256-rRQESi0Skoyf1jy/dRRK6ooKRPQhkak107kk5ulwZYI=";
+                  };
+                });
+              })
               # Suppress "xorg.lndir has been renamed to lndir" deprecation warning
               (final: prev: {
                 xorg = prev.xorg // {

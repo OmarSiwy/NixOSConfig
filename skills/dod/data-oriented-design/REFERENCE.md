@@ -177,17 +177,7 @@ defer arena.deinit(); // frees everything at once
 const alloc = arena.allocator();
 ```
 
-**SIMD-friendly iteration** — align and use `@Vector`:
-```zig
-// Process 4 positions at once
-const simd_width = 4;
-var i: usize = 0;
-while (i + simd_width <= positions.len) : (i += simd_width) {
-    const pos: @Vector(simd_width, f32) = positions[i..][0..simd_width].*;
-    const vel: @Vector(simd_width, f32) = velocities[i..][0..simd_width].*;
-    positions[i..][0..simd_width].* = pos + vel;
-}
-```
+**SIMD-friendly iteration** — vectorizing a hot loop is the simd-loops skill's job; its [zig.md](../simd-loops/zig.md) carries the `@Vector` idioms.
 
 ## Data Normalization (In-Memory Relational Thinking)
 
