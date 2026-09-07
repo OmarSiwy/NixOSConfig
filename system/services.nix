@@ -1,16 +1,35 @@
 { pkgs, lib, username, ... }:
 let
-  # Root helper to flip the CPU governor (performance <-> powersave) from the
-  # eww panel. NOTE: TLP may re-apply its own governor on an AC/battery change.
+  # Root helper behind the eww panel's power-profile buttons.
+  #
+  # This CPU runs intel_pstate, which offers only performance/powersave as
+  # governors — the governor alone barely moves package power. The knobs that
+  # do are EPP (energy_performance_preference) and the Legion EC's ACPI
+  # platform_profile, which sets the sustained power/fan envelope. Write all
+  # three or the mode is cosmetic.
+  #
+  # NOTE: TLP re-applies its own governor/EPP on an AC<->battery transition, so
+  # a mode picked here holds until you plug or unplug. platform_profile is
+  # untouched by TLP (no PLATFORM_PROFILE_ON_* set), which is why the bar polls
+  # that one as the source of truth.
   setPowerprofile = pkgs.writeShellScriptBin "set-powerprofile" ''
-    g="$1"
-    case "$g" in
-      performance|powersave) ;;
+    case "$1" in
+      performance) gov=performance; epp=performance; prof=performance ;;
+      powersave)   gov=powersave;   epp=power;       prof=low-power   ;;
       *) echo "usage: set-powerprofile performance|powersave" >&2; exit 1 ;;
     esac
+
     for c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-      echo "$g" > "$c"
+      echo "$gov" > "$c"
     done
+    # EPP exists only while intel_pstate/amd-pstate runs in active mode.
+    for c in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do
+      [ -w "$c" ] && echo "$epp" > "$c"
+    done
+    # legion-laptop; choices on this box: low-power balanced performance max-power custom
+    [ -w /sys/firmware/acpi/platform_profile ] \
+      && echo "$prof" > /sys/firmware/acpi/platform_profile
+    exit 0
   '';
 in
 {
@@ -64,18 +83,13 @@ in
       enable = true;
       interval = "weekly";
     };
-    illum.enable = true;
+    # ponytail: illum removed — 18MB resident to handle XF86MonBrightness keys
+    # that rill already binds (config.zon). Both running meant every keypress
+    # stepped brightness twice.
     libinput.enable = true;
     openssh.enable = true;
-    avahi = {
-      enable = true;
-      nssmdns4 = true;
-      openFirewall = true;
-      publish = {
-        enable = true;
-        userServices = true;
-      };
-    };
+    # ponytail: avahi removed (3MB + open mDNS port). Costs .local discovery —
+    # re-add if a network printer or Miracast cast stops being found.
     fwupd.enable = true;
     upower.enable = true;
     gnome.gnome-keyring.enable = true;
@@ -84,10 +98,12 @@ in
   systemd = {
     packages = [ pkgs.pritunl-client ];
     services = {
-      pritunl-client = {
-        wantedBy = [ "multi-user.target" ];
-        after = [ "network.target" ];
-      };
+      # ponytail: on-demand, not wantedBy multi-user.target — 21MB standing for
+      # a school VPN used occasionally. `systemctl start pritunl-client`.
+      pritunl-client.after = [ "network.target" ];
+      # No WWAN modem in this laptop (mmcli -L finds none); NetworkManager pulls
+      # ModemManager in regardless. 9MB for hardware that isn't here.
+      ModemManager.enable = false;
       nvidia-powerd.enable = false;
       NetworkManager-wait-online.enable = false;
     };

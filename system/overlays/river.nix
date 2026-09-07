@@ -1,72 +1,18 @@
-# Overlay: river 0.4.5 compositor + rill 0.6.0 window manager
-# river-classic in nixpkgs is used as the base to build river 0.4.5.
-# River 0.4.x is a non-monolithic compositor — it requires a separate WM (rill).
+# Overlay: river 0.4.8 compositor.
+# river-classic in nixpkgs is used as the base to build river 0.4.8.
+# River 0.4.x is a non-monolithic compositor — it requires a separate WM.
+# That WM is `rill`, which comes from the `brill` flake input's overlay.
 final: prev: {
-  # rill: minimalist scrolling WM implementing river-window-management-v1
-  # Windows open in horizontal columns you scroll through (PaperWM-style).
-  # Config: ~/.config/rill/config.zon
-  # Source: https://codeberg.org/lzj15/rill
-  rill = prev.stdenv.mkDerivation (finalAttrs: {
-    pname = "rill";
-    version = "0.6.0";
-
-    src = prev.lib.cleanSource ../../pkgs/rill;
-
-    deps = prev.linkFarm "zig-packages" [
-      {
-        name = "wayland-0.6.0-lQa1kqz8AQADQmdNJsNhLoNHcnEGEUjrOaPV-dtEnEmX";
-        path = prev.fetchzip {
-          url = "https://codeberg.org/ifreund/zig-wayland/archive/v0.6.0.tar.gz";
-          hash = "sha256-3m/ITNhZUJ/5uD/Tqm+0uZSktGoYgWF5oldOqOCUkIE=";
-        };
-      }
-      {
-        name = "xkbcommon-0.4.0-VDqIe0i2AgDRsok2GpMFYJ8SVhQS10_PI2M_CnHXsJJZ";
-        path = prev.fetchzip {
-          url = "https://codeberg.org/ifreund/zig-xkbcommon/archive/v0.4.0.tar.gz";
-          hash = "sha256-zQkmP/cuhAtjOLqYS5D15khKzpqyhbyZ0TD6/8jOkqE=";
-        };
-      }
-    ];
-
-    nativeBuildInputs = [ final.zig_0_16.hook prev.pkg-config prev.wayland-scanner ];
-    buildInputs = [
-      prev.wayland
-      prev.wayland-protocols
-      prev.libxkbcommon
-    ];
-
-    dontConfigure = true;
-
-    preBuild = ''
-      export ZIG_GLOBAL_CACHE_DIR="$TMPDIR/zig-global-cache"
-      mkdir -p "$ZIG_GLOBAL_CACHE_DIR"
-    '';
-
-    zigBuildFlags = [
-      "--system" "${finalAttrs.deps}"
-      "--release=safe"
-    ];
-
-    meta = {
-      description = "Minimalist scrolling window manager for the river compositor";
-      homepage = "https://codeberg.org/lzj15/rill";
-      license = prev.lib.licenses.mit;
-      platforms = prev.lib.platforms.linux;
-      mainProgram = "rill";
-    };
-  });
-
   river-classic = prev.river-classic.overrideAttrs (old: {
     pname = "river";
-    version = "0.4.5";
+    version = "0.4.8";
 
     src = prev.fetchFromGitea {
       domain = "codeberg.org";
       owner = "river";
       repo = "river";
-      tag = "v0.4.5";
-      hash = "sha256-q4JAlr9/ex+BEgktBmFwOvZzQEAGvxXPD1QyKqyha4g=";
+      tag = "v0.4.8";
+      hash = "sha256-vqOGyd0sddjYZ47xPMFmfzDIg8mHfIBzAJQ2CcsMQ3Y=";
     };
 
     # river 0.4.x removed example/init; the base postInstall tries to install it.

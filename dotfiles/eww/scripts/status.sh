@@ -18,8 +18,15 @@ fi
 
 makoctl mode 2>/dev/null | grep -q do-not-disturb && dnd=true || dnd=false
 
+# Device must be named: this box exposes both intel_backlight (the panel, 0-496)
+# and an nvidia_0 stub pinned at 100%, and brightnessctl's unnamed default picks
+# the nvidia one — so the bar reported a permanent 100%. Field 4 is the percent.
+bri=$(brightnessctl -d intel_backlight -m 2>/dev/null | cut -d, -f4 | tr -d '%')
+bri=${bri:-0}
+
 jq -nc \
     --argjson vol "$vol" --argjson muted "$muted" \
     --argjson bcap "$bcap" --argjson charging "$charging" \
     --arg net "$net" --arg bt "$bt" --argjson dnd "$dnd" \
-    '{vol:$vol, muted:$muted, bcap:$bcap, charging:$charging, net:$net, bt:$bt, dnd:$dnd}'
+    --argjson bri "$bri" \
+    '{vol:$vol, muted:$muted, bcap:$bcap, charging:$charging, net:$net, bt:$bt, dnd:$dnd, bri:$bri}'

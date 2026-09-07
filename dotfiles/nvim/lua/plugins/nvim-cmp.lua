@@ -100,17 +100,17 @@ cmp.setup({
         },
     },
     sources = cmp.config.sources(
-        {
-            { name = "nvim_lsp" },
-            { name = "vsnip" },
-            { name = "buffer" },
-            { name = "path" },
-            { name = "spell" },
-        }
+        -- Group 2 (buffer/path) only shows when the LSP returns nothing,
+        -- so raw buffer words can never bury real completions.
+        { { name = "nvim_lsp" }, { name = "vsnip" } },
+        { { name = "buffer" }, { name = "path" } }
     ),
     formatting = {
-        format = function(_, vim_item)
+        format = function(entry, vim_item)
             vim_item.kind = (cmp_kinds[vim_item.kind] or "") .. vim_item.kind
+            -- Where it came from: LSP `detail` (module/signature), else source name.
+            local detail = entry.completion_item.detail
+            vim_item.menu = detail and vim.split(detail, "\n")[1] or entry.source.name
             return vim_item
         end,
     },

@@ -7,6 +7,8 @@
     # ── Rust ──
     rust-analyzer # LSP
     rustfmt # formatter
+    clippy # linter (rust-analyzer `check.command = "clippy"` shells out to this)
+    rustc # compiler -- rust-analyzer runs `rustc --print sysroot` to find std/core/alloc
     cargo # build / runtime
 
     # ── Python ──

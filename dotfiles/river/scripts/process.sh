@@ -11,7 +11,7 @@ kanshi &
 sleep 0.2
 
 # ═══════════════════════════════════════════
-# SHELL DOCK - EWW (slim strip + hover panel; replaces waybar)
+# SIDE BAR - EWW (Tokyo Night bar on the right edge; replaces waybar)
 # ═══════════════════════════════════════════
 # `eww kill`, not `killall eww`: on NixOS the daemon's comm is `.eww-wrapped`
 # (same wrapper gotcha as awww-daemon below), so killall's exact match no-ops
@@ -32,9 +32,6 @@ nout=$(wlr-randr 2>/dev/null | grep -cE '^[^ ]'); [ "${nout:-0}" -ge 1 ] || nout
 for i in $(seq 0 $((nout - 1))); do
   eww open dock  --id "dock-$i"  --screen "$i"
   eww open strut --id "strut-$i" --screen "$i"
-  # tray opened last so it maps above the dock at the right edge (both overlay
-  # layer) — keeps the tray icons clickable and their right-click menu stable.
-  eww open tray  --id "tray-$i"  --screen "$i"
 done
 
 # ═══════════════════════════════════════════
@@ -84,15 +81,16 @@ bash $HOME/.config/river/scripts/wallpaper.sh
 # ═══════════════════════════════════════════
 # BRIGHTNESS
 # ═══════════════════════════════════════════
-# Set brightness to current level (refresh)
-light -S $(light -G)
+# Nothing to do at startup: the kernel restores the panel's last level, and
+# brightnessctl (rill keybinds + the eww slider) drives it from there.
+# There used to be a `light -S $(light -G)` here — `light` isn't installed, so
+# it only ever printed "command not found" into the session log.
 
 # ═══════════════════════════════════════════
 # SYSTEM TRAY & APPLETS
 # ═══════════════════════════════════════════
-# Network manager applet
-killall nm-applet
-nm-applet --indicator &
+# nm-applet removed: 17MB for a tray icon whose job the eww strip already does
+# (SSID indicator + a NETWORK card that opens nm-connection-editor / nmtui).
 
 # Clipboard persistence for Wayland selections copied via wl-copy
 killall wl-clip-persist 2>/dev/null || true

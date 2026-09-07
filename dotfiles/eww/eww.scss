@@ -1,83 +1,122 @@
-// ─────────────────────────────────────────────────────────────
-// Egypt — the Pharaohs. National-team palette: black, red, white.
-// NOTE: River has no blur protocol, so backgrounds are translucent
-// but not frosted. Everything else (rounding, cards, pills) is real.
-// ─────────────────────────────────────────────────────────────
-$bg:        rgba(10, 10, 10, 0.92);    // near-black
-$bg-strip:  rgba(10, 10, 10, 0.85);
-$card:      rgba(255, 255, 255, 0.05);
-$card-hi:   rgba(255, 255, 255, 0.10);
-$line:      rgba(255, 255, 255, 0.08);
+// Tokyo Night side bar - strip styled after https://github.com/raexera/tokyo
+// (original by rxyhn), panel carried over from the previous dock and recolored
+// to the same palette. Icon fonts remapped to Iosevka Nerd Font: Font Awesome
+// Pro / Material Icons / feather are not installed here.
+//
+// NOTE: `//` comments only. A `/* */` comment survives into the compiled CSS,
+// and if it carries any non-ASCII the compiler prepends `@charset "UTF-8";`,
+// which eww's CSS parser rejects outright.
 
-$fg:        #ffffff;                   // white
-$fg-soft:   #d9d9d9;
-$dim:       #8a8a8a;
+// Tokyo Night palette
+$background: #1A1B26;
+$foreground: #A9B1D6;
 
-$accent:    #ce1126;   // Egyptian flag red
-$accent2:   #ffffff;   // white
-$teal:      #ce1126;
-$green:     #9ece6a;
-$yellow:    #e3a008;
-$red:       #ce1126;
-$dark:      #0a0a0a;
+$black: #24283B;
+$gray: #565F89;
+$red: #F7768E;
+$green: #73DACA;
+$yellow: #E0AF68;
+$blue: #7AA2F7;
+$magenta: #BB9AF7;
+$cyan: #7DCFFF;
+$white: $foreground;
+
+$line: rgba(169, 177, 214, 0.10);
+$card: rgba(169, 177, 214, 0.06);
+$card-hi: rgba(169, 177, 214, 0.13);
 
 * {
   all: unset;
   font-family: "Iosevka Nerd Font";
-  font-size: 14px;
+  font-size: 13px;
 }
 
 @mixin card {
   background-color: $card;
   border: 1px solid $line;
-  border-radius: 18px;
-  padding: 16px;
-}
-@mixin pill {
-  border-radius: 999px;
+  border-radius: 14px;
+  padding: 14px;
 }
 
-// ── Slim strip (floating pill on the right edge) ──────────────
+// ── Strip ─────────────────────────────────────────────────────
+// 30px of usable width: everything centered, no side padding to fight over.
 .strip {
-  background-color: $bg-strip;
-  border: 1px solid $line;
-  border-radius: 26px;
-  padding: 16px 0;
-  margin: 6px 8px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  background-color: $background;
+  padding: 10px 0;
+  min-width: 30px;
 }
-.clock-mini {
-  .h { font-size: 18px; font-weight: 700; color: $fg; }
-  .m { font-size: 18px; font-weight: 700; color: $accent; }
+
+.launcher-icon {
+  color: $cyan;
+  font-size: 17px;
+  padding: 4px 0 10px 0;
 }
-.strip-icons {
-  .ic  { font-size: 17px; color: $fg-soft; }
-  .pct { font-size: 9px; color: $dim; margin-top: 1px; }
-  .batt .ic { color: $green; }
+
+// Workspaces
+.works {
+  background-color: $black;
+  border-radius: 8px;
+  padding: 6px 0;
+  margin: 0 3px;
+}
+.ws {
+  font-size: 10px;
+  margin: 3px 0;
+}
+.ws.e { color: $gray; }
+.ws.o { color: $blue; }
+.ws.f { color: $foreground; }
+
+// Indicator column
+.control {
+  background-color: $black;
+  border-radius: 8px;
+  padding: 8px 0;
+  margin: 6px 3px;
+}
+.ic { font-size: 15px; }
+.ic.net { color: $magenta; }
+.ic.vol { color: $green; }
+.ic.bri { color: $yellow; }
+.ic.bat { color: $blue; }
+.pct { font-size: 9px; color: $gray; }
+
+// Clock
+.time {
+  background-color: $black;
+  border-radius: 8px;
+  margin: 0 3px 6px 3px;
+  padding: 7px 0;
+  .time-hour, .time-min {
+    font-size: 13px;
+    font-weight: bold;
+    color: $white;
+  }
+  .time-min { color: $blue; }
 }
 
 // ── Panel ─────────────────────────────────────────────────────
 .panel {
   min-width: 340px;
-  background-color: $bg;
+  background-color: $background;
   border: 1px solid $line;
-  border-radius: 28px;
-  padding: 22px;
-  margin: 6px 10px 6px 6px;
+  border-radius: 20px;
+  padding: 20px;
+  margin: 6px 8px 6px 6px;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
 }
 
 // Header
-.greeting  { font-size: 13px; color: $dim; }
-.big-clock { font-size: 36px; font-weight: 700; color: $fg; }
-.date      { font-size: 13px; color: $fg-soft; margin-top: 2px; }
+.greeting  { font-size: 13px; color: $gray; }
+.big-clock { font-size: 34px; font-weight: 700; color: $foreground; }
+.date      { font-size: 13px; color: $white; margin-top: 2px; }
 .bat-pill {
-  @include pill;
   background-color: $card;
   border: 1px solid $line;
+  border-radius: 999px;
   padding: 6px 12px;
   .bat-ic  { font-size: 15px; color: $green; }
-  .bat-pct { font-size: 13px; color: $fg-soft; font-weight: 600; }
+  .bat-pct { font-size: 13px; color: $white; font-weight: 600; }
   &.low .bat-ic, &.low .bat-pct { color: $red; }
 }
 
@@ -85,130 +124,177 @@ $dark:      #0a0a0a;
 .card { @include card; }
 .card-title {
   font-size: 11px; font-weight: 700;
-  color: $dim; letter-spacing: 1.5px;
+  color: $gray; letter-spacing: 1.5px;
   margin-bottom: 6px;
 }
 
 // Media
 .cover-ph {
-  min-width: 64px; min-height: 64px;
-  border-radius: 16px;
-  background-image: linear-gradient(135deg, $accent 0%, $accent2 100%);
+  min-width: 60px; min-height: 60px;
+  border-radius: 14px;
+  background-image: linear-gradient(135deg, $blue 0%, $magenta 100%);
 }
-.cover-ic { font-size: 30px; color: rgba(255, 255, 255, 0.92); }
-.spotify-ic { color: #1db954; font-size: 14px; }   // Spotify brand green
-.cover    { border-radius: 16px; }
-.track  { font-size: 15px; font-weight: 600; color: $fg; }
-.artist { font-size: 13px; color: $dim; margin-top: 2px; }
+.cover-ic { font-size: 28px; color: $background; }
+.music-ic { color: $green; font-size: 14px; }
+.track  { font-size: 15px; font-weight: 600; color: $foreground; }
+.artist { font-size: 13px; color: $gray; margin-top: 2px; }
 .controls {
-  margin-top: 12px;
+  margin-top: 10px;
   .ctrl {
-    font-size: 20px; color: $fg-soft;
-    min-width: 40px; min-height: 40px;
+    font-size: 19px; color: $white;
+    min-width: 38px; min-height: 38px;
     border-radius: 999px;
     background-color: $card;
-    &:hover { background-color: $card-hi; color: $fg; }
+    &:hover { background-color: $card-hi; color: $foreground; }
   }
   .play {
-    font-size: 22px; color: $dark;
-    min-width: 52px; min-height: 52px;
-    background-color: $accent;
-    box-shadow: 0 4px 16px rgba(122, 162, 247, 0.4);
-    &:hover { background-color: $teal; }
+    font-size: 21px; color: $background;
+    min-width: 48px; min-height: 48px;
+    background-color: $blue;
+    &:hover { background-color: $cyan; }
   }
 }
 
 // System metrics
 .metric { margin-top: 2px; }
-.metric-ic { font-size: 16px; color: $accent2; }
-.metric label { color: $fg-soft; font-size: 13px; }
+.metric-ic { font-size: 16px; color: $blue; }
+.metric label { color: $white; font-size: 13px; }
 .bar {
   margin-top: 6px;
   background-color: rgba(0, 0, 0, 0.35);
   border-radius: 999px;
   min-height: 7px;
   progress {
-    background-image: linear-gradient(to right, $accent, $accent2);
+    background-image: linear-gradient(to right, $blue, $magenta);
     border-radius: 999px;
   }
 }
 
-// Quick toggles
-.toggles .tg {
-  font-size: 18px; color: $dim;
-  min-width: 52px; min-height: 44px;
-  border-radius: 16px;
+// Network
+.net-row {
   background-color: $card;
   border: 1px solid $line;
-  &:hover { background-color: $card-hi; color: $fg-soft; }
+  border-radius: 12px;
+  padding: 10px 12px;
+  &:hover { background-color: $card-hi; }
+}
+.net-ic { font-size: 17px; color: $gray; }
+.net-ic.on { color: $magenta; }
+.net-name { font-size: 13px; color: $white; }
+
+// Quick toggles
+.toggles .tg {
+  font-size: 18px; color: $gray;
+  min-width: 52px; min-height: 42px;
+  border-radius: 14px;
+  background-color: $card;
+  border: 1px solid $line;
+  &:hover { background-color: $card-hi; color: $white; }
   &.on {
-    color: $dark;
-    background-color: $accent;
+    color: $background;
+    background-color: $blue;
     border-color: transparent;
-    box-shadow: 0 4px 14px rgba(122, 162, 247, 0.35);
   }
 }
 
-// Sound
+// Sound + brightness
 .mini-btn {
-  font-size: 12px; color: $fg-soft;
+  font-size: 12px; color: $white;
   background-color: $card; border: 1px solid $line;
   padding: 5px 12px; border-radius: 999px;
-  &:hover { background-color: $card-hi; color: $fg; }
+  &:hover { background-color: $card-hi; color: $foreground; }
 }
 .snd-ic {
-  font-size: 18px; color: $accent;
-  min-width: 36px; min-height: 36px;
+  font-size: 17px; color: $blue;
+  min-width: 34px; min-height: 34px;
   border-radius: 999px; background-color: $card;
   &:hover { background-color: $card-hi; }
 }
-.vol-pct { font-size: 12px; color: $dim; min-width: 36px; }
-scale.vol-scale {
+.vol-pct { font-size: 12px; color: $gray; min-width: 36px; }
+scale.vol-scale, scale.bri-scale {
   trough {
     background-color: rgba(0, 0, 0, 0.35);
     border-radius: 999px; min-height: 8px;
-    highlight { background-color: $accent; border-radius: 999px; }
+    highlight { border-radius: 999px; }
   }
   slider {
-    background-color: $fg;
+    background-color: $foreground;
     border-radius: 999px;
     min-width: 16px; min-height: 16px;
     margin: -5px;
   }
 }
+scale.vol-scale trough highlight { background-color: $green; }
+scale.bri-scale trough highlight { background-color: $yellow; }
 
 // Power profile
 .profiles .prof {
-  font-size: 13px; color: $fg-soft;
+  font-size: 13px; color: $white;
   background-color: $card; border: 1px solid $line;
-  padding: 10px 8px; border-radius: 14px;
-  &:hover { background-color: $card-hi; color: $fg; }
+  padding: 10px 8px; border-radius: 12px;
+  &:hover { background-color: $card-hi; color: $foreground; }
   &.on {
-    color: $dark; background-color: $green;
+    color: $background; background-color: $green;
     border-color: transparent;
-    box-shadow: 0 4px 14px rgba(158, 206, 106, 0.30);
   }
 }
 
 // Notifications
-.notif-empty { font-size: 13px; color: $dim; }
+.notif-empty { font-size: 13px; color: $gray; }
+.notif-list { min-height: 140px; }
 .notif {
   background-color: $card;
   border: 1px solid $line;
   border-radius: 12px;
   padding: 10px 12px;
 }
-.notif-app { font-size: 11px; color: $accent; font-weight: 600; }
-.notif-sum { font-size: 13px; color: $fg-soft; }
+.notif-app { font-size: 11px; color: $blue; font-weight: 600; }
+.notif-sum { font-size: 13px; color: $white; }
 
-// Power
-.power {
-  font-size: 20px; color: $red;
-  min-width: 48px; min-height: 48px;
+// Power buttons - strip shows only shutdown, panel shows the row
+.power-row button {
+  font-size: 18px;
+  min-width: 42px; min-height: 42px;
   border-radius: 999px;
-  background-color: rgba(247, 118, 142, 0.12);
-  &:hover { background-color: rgba(247, 118, 142, 0.25); }
+  background-color: $card;
+  &:hover { background-color: $card-hi; }
 }
+.button-lock { color: $blue; }
+.button-quit { color: $magenta; }
+.button-reb  { color: $yellow; }
+.button-off  { color: $red; }
+.strip .button-off {
+  font-size: 15px;
+  padding: 4px 0;
+}
+
+// Calendar
+.cal-box {
+  background-color: $black;
+  border: 1px solid $line;
+  border-radius: 14px;
+  font-weight: bold;
+
+  .cal-inner-box {
+    padding: 1rem 1rem .2rem;
+
+    .cal {
+      padding: .8rem .25rem 0rem;
+      margin-left: 10px;
+    }
+  }
+}
+calendar:selected { color: $blue; }
+calendar.header {
+  color: $blue;
+  font-weight: bold;
+}
+calendar.button { color: $magenta; }
+calendar.highlight {
+  color: $magenta;
+  font-weight: bold;
+}
+calendar:indeterminate { color: $background; }
 
 // System tray (SNI). The `* { all: unset }` reset above strips the GTK popup
 // menu's default background, so the right-click menu renders invisible (looks
@@ -216,23 +302,25 @@ scale.vol-scale {
 .tray {
   padding: 4px 0;
   > image {
-    padding: 4px;
+    padding: 3px;
     border-radius: 8px;
     &:hover { background-color: $card-hi; }
   }
 }
+// Only apps that export a StatusNotifierItem land here; today that is just
+// nm-applet. It is not a task list — plain GTK apps never appear.
 
 menu {
-  background-color: rgba(10, 10, 10, 0.97);
+  background-color: $black;
   border: 1px solid $line;
   border-radius: 10px;
   padding: 6px;
 }
 menu menuitem {
-  color: $fg-soft;
+  color: $white;
   padding: 6px 14px;
   border-radius: 6px;
-  &:hover { background-color: $accent; color: $fg; }
+  &:hover { background-color: $blue; color: $background; }
 }
 menu separator {
   background-color: $line;

@@ -59,10 +59,13 @@ return {
 		lsp_config = {
 			settings = {
 				zls = {
-					enable_inlay_hints = true,
+					-- Key names must match zls 0.16 exactly; unknown keys are dropped
+					-- silently. `zls --help` has no schema dump, so cross-check against
+					-- `strings $(which zls)` when bumping zls.
 					enable_snippets = true,
 					warn_style = true,
-					enable_semantic_tokens = true,
+					semantic_tokens = "full",
+					enable_build_on_save = true,
 				},
 			},
 		},

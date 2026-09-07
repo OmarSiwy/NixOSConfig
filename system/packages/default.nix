@@ -76,6 +76,7 @@ in
 {
   imports = [
     ./development.nix
+    ./research-gateway.nix
   ];
 
   nixpkgs.config.allowUnfree = true;
@@ -114,6 +115,7 @@ in
 
       # ── Gaming ──  (Lutris/Steam stack; Steam itself under programs.steam)
       lutris-nvidia
+      prismlauncher # Minecraft launcher (bundles its own JDKs)
       mangohud # in-game perf overlay
       protonup-qt # manages GE-Proton versions
       mesa-demos # glxinfo — Lutris diagnostic shim (see services.nix envfs)

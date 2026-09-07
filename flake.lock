@@ -1,5 +1,26 @@
 {
   "nodes": {
+    "brill": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1788818691,
+        "narHash": "sha256-gZItm+eDs9s0LqL7xY4QIdvA3DJ2uZPgPX9KF3Z/LVk=",
+        "owner": "OmarSiwy",
+        "repo": "Brill",
+        "rev": "76ce6840f07ae89decf68ac50f946cd5c7d4fd12",
+        "type": "github"
+      },
+      "original": {
+        "owner": "OmarSiwy",
+        "ref": "v0.6.0-brill.1",
+        "repo": "Brill",
+        "type": "github"
+      }
+    },
     "claude-code": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -212,6 +233,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-latest": {
+      "locked": {
+        "lastModified": 1786862985,
+        "narHash": "sha256-FBJRXmbGXiSUDvYEbfLYRkckayyZ6SK1UEqhCrIZ2Cs=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "e5bdc4a41d4c072fe1e3787eaa0320a384741d44",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-stable": {
       "locked": {
         "lastModified": 1730741070,
@@ -289,11 +326,13 @@
     },
     "root": {
       "inputs": {
+        "brill": "brill",
         "claude-code": "claude-code",
         "codex-cli": "codex-cli",
         "home-manager": "home-manager",
         "lanzaboote": "lanzaboote",
         "nixpkgs": "nixpkgs_2",
+        "nixpkgs-latest": "nixpkgs-latest",
         "nixpkgs-stable": "nixpkgs-stable_2",
         "spicetify-nix": "spicetify-nix"
       }

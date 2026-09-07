@@ -29,8 +29,8 @@
         .{ .key = "p",      .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/fuzzel/powermenu.sh" } } },
 
         // -- Screenshots --
-        // Super+Shift+S -> area screenshot to clipboard
-        .{ .key = "s", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/river/scripts/screenshot.sh" } } },
+        // Super+S -> area screenshot to clipboard
+        .{ .key = "s", .modifiers = .{ .mod4 = true }, .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/river/scripts/screenshot.sh" } } },
         // Super+Shift+A -> area screenshot to file
         .{ .key = "a", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .spawn = .{ "sh", "-c", "$HOME/.config/river/scripts/screenshot-save.sh" } } },
 
@@ -71,16 +71,16 @@
         .{ .key = "Up",   .modifiers = .{ .mod4 = true, .shift = true }, .action = .move_window_to_workspace_above },
         .{ .key = "Down", .modifiers = .{ .mod4 = true, .shift = true }, .action = .move_window_to_workspace_below },
 
-        .{ .key = "1", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 1 } },
-        .{ .key = "2", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 2 } },
-        .{ .key = "3", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 3 } },
-        .{ .key = "4", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 4 } },
-        .{ .key = "5", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 5 } },
-        .{ .key = "6", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 6 } },
-        .{ .key = "7", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 7 } },
-        .{ .key = "8", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 8 } },
-        .{ .key = "9", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 9 } },
-        .{ .key = "0", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .move_window_to_workspace_number = 10 } },
+        .{ .key = "1", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 1 } },
+        .{ .key = "2", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 2 } },
+        .{ .key = "3", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 3 } },
+        .{ .key = "4", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 4 } },
+        .{ .key = "5", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 5 } },
+        .{ .key = "6", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 6 } },
+        .{ .key = "7", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 7 } },
+        .{ .key = "8", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 8 } },
+        .{ .key = "9", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 9 } },
+        .{ .key = "0", .modifiers = .{ .mod4 = true, .shift = true }, .action = .{ .send_window_to_workspace_number = 10 } },
 
         // -- Output focus / move --
         .{ .key = "j", .modifiers = .{ .mod4 = true },                .action = .focus_output_left },

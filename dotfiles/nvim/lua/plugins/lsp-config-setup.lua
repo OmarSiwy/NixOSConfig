@@ -15,7 +15,7 @@ local function setup_ui()
 			},
 		},
 		underline = true,
-		update_in_insert = true,
+		update_in_insert = false,
 		severity_sort = true,
 		float = {
 			focusable = false,
@@ -98,20 +98,8 @@ for _, lang in ipairs(languages) do
 		config.on_attach = on_attach
 		config.capabilities = capabilities
 
-		-- Use PATH lookup for the LSP binary (respects nix-shell)
-		local server_config = lspconfig[lang.lsp]
-		if server_config and server_config.document_config then
-			local default_config = server_config.document_config.default_config
-			if default_config and default_config.cmd and default_config.cmd[1] then
-				local binary = default_config.cmd[1]
-				local resolved = vim.fn.exepath(binary)
-				if resolved ~= "" then
-					config.cmd = vim.deepcopy(default_config.cmd)
-					config.cmd[1] = resolved
-				end
-			end
-		end
-
+		-- ponytail: no exepath() rewrite -- lspconfig already spawns cmd[1] via PATH,
+		-- and the old rewrite silently replaced per-language cmd flags with the default.
 		lspconfig[lang.lsp].setup(config)
 	end
 end
