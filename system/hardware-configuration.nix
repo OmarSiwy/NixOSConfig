@@ -14,17 +14,17 @@
   boot.extraModulePackages = [ ];
 
   fileSystems."/" =
-    { device = "/dev/mapper/luks-cf3c791b-2f4e-46ec-a1b5-af009b3cbd51";
+    { device = "/dev/mapper/luks-d1b795a9-7da9-4526-ac51-9b7ba09e21f8";
       fsType = "ext4";
     };
 
-  boot.initrd.luks.devices."luks-cf3c791b-2f4e-46ec-a1b5-af009b3cbd51".device = "/dev/disk/by-uuid/cf3c791b-2f4e-46ec-a1b5-af009b3cbd51";
+  boot.initrd.luks.devices."luks-d1b795a9-7da9-4526-ac51-9b7ba09e21f8".device = "/dev/disk/by-uuid/d1b795a9-7da9-4526-ac51-9b7ba09e21f8";
 
   # /bin and /usr/bin are managed by services.envfs (FUSE). The old bind mount
   # here conflicted with envfs's usr-bin.mount and caused shutdown/boot errors.
 
   fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/2607-E88B";
+    { device = "/dev/disk/by-uuid/C006-F495";
       fsType = "vfat";
       options = [ "fmask=0077" "dmask=0077" ];
     };
