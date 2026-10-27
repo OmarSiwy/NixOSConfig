@@ -28,7 +28,7 @@ resolve_art() {
 emit() {
     status=$(playerctl status 2>/dev/null || echo "")
     if [ -z "$status" ]; then
-        echo '{"status":"","title":"Nothing playing","artist":"","art":""}'
+        echo '{"status":"","title":"","artist":"","art":""}'
         return
     fi
     title=$(playerctl metadata --format '{{title}}' 2>/dev/null)

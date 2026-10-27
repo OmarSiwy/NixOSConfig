@@ -1,7 +1,10 @@
 ---
 name: pragmatic-programmer
-description: Pragmatic Programmer decision heuristics for code changes. Use when writing new modules, refactoring, reviewing code, designing APIs, choosing abstractions, or when a change touches multiple files. Triggers on DRY violations, coupling issues, reversibility concerns, contract design.
+description: Pragmatic Programmer decision heuristics — DRY, orthogonality, reversibility, contracts, tracer bullets.
+disable-model-invocation: true
 ---
+
+> Abstraction choices in systems code (which mechanism, at what cost) belong to `codebase-clean-code` and its `LADDER.md`; where this skill and that one disagree, that one wins.
 
 # Pragmatic Programmer
 

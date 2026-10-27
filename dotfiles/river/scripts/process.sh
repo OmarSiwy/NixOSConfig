@@ -23,15 +23,11 @@ sleep 0.2
 # `&`/sleep race: backgrounding it meant `eww open` could fire before the socket
 # existed, spawn a second competing daemon, and silently drop the windows.
 eww daemon
-# One dock + strut per connected output — eww has no "all monitors" flag, so we
-# open a uniquely-id'd instance per screen index (--screen overrides :monitor).
-# strut = invisible exclusive lane that indents tiled windows past the strip.
-# ponytail: dock_hover is one global var, so hovering any strip reveals the panel
-# on every monitor. Per-monitor hover needs dock_hover_$i — add if it annoys.
+# One dock per connected output — eww has no "all monitors" flag, so we open a
+# uniquely-id'd instance per screen index (--screen overrides :monitor).
 nout=$(wlr-randr 2>/dev/null | grep -cE '^[^ ]'); [ "${nout:-0}" -ge 1 ] || nout=1
 for i in $(seq 0 $((nout - 1))); do
-  eww open dock  --id "dock-$i"  --screen "$i"
-  eww open strut --id "strut-$i" --screen "$i"
+  eww open dock --id "dock-$i" --screen "$i"
 done
 
 # ═══════════════════════════════════════════
@@ -89,8 +85,11 @@ bash $HOME/.config/river/scripts/wallpaper.sh
 # ═══════════════════════════════════════════
 # SYSTEM TRAY & APPLETS
 # ═══════════════════════════════════════════
-# nm-applet removed: 17MB for a tray icon whose job the eww strip already does
-# (SSID indicator + a NETWORK card that opens nm-connection-editor / nmtui).
+# Started here, not via programs.nm-applet: that module hangs off
+# graphical-session.target, which this river session never activates.
+# --indicator = StatusNotifierItem, the only kind eww's systray shows.
+pkill -x nm-applet 2>/dev/null || true
+nm-applet --indicator &
 
 # Clipboard persistence for Wayland selections copied via wl-copy
 killall wl-clip-persist 2>/dev/null || true

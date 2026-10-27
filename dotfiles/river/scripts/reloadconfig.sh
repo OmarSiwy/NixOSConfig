@@ -28,7 +28,9 @@ rm -rf /tmp/eww-art   # album-art PNG cache; drop it so a stale/bad cover can't 
 echo ''
 if pgrep -x river >/dev/null; then
     echo "  • Restarting system services (wallpaper, eww, etc.)..."
-    setsid bash "/home/omare/.config/river/scripts/process.sh" &
+    # Detached + logged: otherwise eww/awww/kanshi keep printing into whatever
+    # terminal ran this (e.g. rebuild.sh) after its prompt returns.
+    setsid bash "/home/omare/.config/river/scripts/process.sh" >"$STATE_DIR/process.log" 2>&1 < /dev/null &
     echo "    ✓ process.sh restarted"
 else
     echo "  • River: Not running"

@@ -1,0 +1,397 @@
+#!/usr/bin/env python3
+"""Research agents on nanoMuse, driven by another assistant over each agent's own server.
+
+  muse-agent init NAME               create ~/.local/share/muse-agents/NAME
+  muse-agent say NAME TEXT [--new]   send a message (starting the agent if needed), wait, print
+                                     what it did; also how to answer its question (--new: a
+                                     fresh conversation)
+  muse-agent wait NAME               keep waiting after a `say` that timed out
+  muse-agent approve NAME ID yes|no  answer an approval card
+  muse-agent done NAME               end a hand-over: the person finished on the page
+  muse-agent show NAME | hide NAME   the agent's Chromium as a visible window, or headless again
+                                     (the default); restarts a running agent, the chat stays
+  muse-agent console NAME            the web console link, where the person takes the page over
+  muse-agent login NAME URL          a visible Chromium on NAME's profile (agent stopped)
+  muse-agent import NAME             copy your own Chromium's logins into NAME (both closed)
+  muse-agent stop NAME | list
+
+Standard library only, so the client side runs on any Python 3; the agent itself runs inside
+the nanoMuse checkout's `nix develop`.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import secrets
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+REPO = Path(os.environ.get("NANOMUSE_REPO", Path.home() / "Documents/Projects/nanoMuse"))
+ROOT = Path(os.environ.get("MUSE_AGENTS", Path.home() / ".local/share/muse-agents"))
+ENV_FILE = Path(os.environ.get("MUSE_ENV", Path.home() / ".config/muse-agents.env"))
+CHROMIUM = shutil.which("chromium") or ""
+# your own Chromium's profile, what `import` copies
+CHROMIUM_DIR = Path(os.environ.get("MUSE_CHROMIUM_DIR", Path.home() / ".config/chromium"))
+# what `import` leaves behind: caches, rebuilt by Chromium, and the running browser's locks
+SKIP = shutil.ignore_patterns(
+    "Cache", "Code Cache", "GPUCache", "*ShaderCache", "*DawnCache", "Dawn*Cache", "CacheStorage",
+    "Crash Reports", "Singleton*",
+)
+WAIT_S = float(os.environ.get("MUSE_WAIT", "900"))  # ponytail: one `say` waits 15 min at most
+
+INSTRUCTIONS = """
+You are a research agent. Your messages come from another assistant, not from a person at a
+keyboard; it may answer your questions and pass a page to its person when one is needed.
+Use the browser to read pages, including sites this browser is already signed in to.
+If a page needs a sign-in, a CAPTCHA or a confirmation only a person can give, call the browser's
+hand_over with a short reason and wait; never type a password yourself.
+If you need a decision (which account, which date range), ask with ask_user.
+Never buy, post, send, delete or change settings on any site: you only read.
+Write your findings to report.md in the workspace (overwrite it): a short answer first, then
+the facts, each with the URL it came from. Quote numbers and names exactly as the page has them.
+End your reply with the same short answer.
+"""
+
+CONFIG = """data_dir = "{dir}/data"
+
+[agent]
+name = "{name}"
+workspace = "{dir}/workspace"
+max_steps = 60
+instructions = \"\"\"{instructions}\"\"\"
+
+[llm]
+# default: the signed-in Claude Code on this computer (claude -p). With a key instead:
+# MUSE_PROVIDER=openai MUSE_BASE_URL=https://api.anthropic.com/v1/ MUSE_MODEL=claude-sonnet-5-5
+provider = "${{MUSE_PROVIDER:-claude-code}}"
+base_url = "${{MUSE_BASE_URL:-}}"
+model = "${{MUSE_MODEL:-sonnet}}"
+api_key = "${{MUSE_API_KEY:-}}"
+
+[browser]
+enabled = true
+backend = "playwright"
+headless = "${{MUSE_HEADLESS:-true}}"  # muse-agent show / hide
+# your own Chromium: it reads the keyring, so the logins `muse-agent import` copies work
+executable = "{chromium}"
+
+[server]
+host = "127.0.0.1"
+port = {port}
+token = "{token}"
+
+[sentinel]
+mode = "ask"
+# reading only: what could change something somewhere is off
+deny_tools = ["shell", "python_execute", "send_email", "skills", "goals", "reminders", "triggers"]
+"""
+
+
+def die(msg: str, code: int = 1) -> None:
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+
+class Agent:
+    def __init__(self, name: str):
+        self.name = name
+        self.dir = ROOT / name
+        self.config = self.dir / "config.toml"
+
+    # ------------------------------------------------------------------ setup
+    def need(self) -> None:
+        if not self.config.exists():
+            die(f"no agent '{self.name}'; run: muse-agent init {self.name}")
+
+    def setting(self, key: str) -> str:
+        for line in self.config.read_text().splitlines():
+            k, _, v = line.partition("=")
+            if k.strip() == key:
+                return v.strip().strip('"')
+        raise KeyError(key)
+
+    @property
+    def base(self) -> str:
+        return f"http://127.0.0.1:{self.setting('port')}"
+
+    def init(self) -> None:
+        if self.config.exists():
+            print(f"{self.dir} already exists")
+            return
+        for sub in ("workspace", "data", "runs"):
+            (self.dir / sub).mkdir(parents=True, exist_ok=True)
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+        text = CONFIG.format(
+            dir=self.dir, name=self.name, instructions=INSTRUCTIONS, port=port,
+            token=secrets.token_urlsafe(24), chromium=CHROMIUM,
+        )  # fmt: skip
+        self.config.write_text(text)
+        self.config.chmod(0o600)
+        print(f"created {self.dir} (port {port})")
+
+    # ------------------------------------------------------------------ the server
+    def api(self, method: str, path: str, body: dict | None = None) -> dict:
+        req = urllib.request.Request(
+            self.base + path,
+            data=json.dumps(body).encode() if body is not None else None,
+            method=method,
+            headers={
+                "Authorization": f"Bearer {self.setting('token')}",
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 — loopback
+                return json.loads(resp.read() or b"{}")
+        except urllib.error.HTTPError as exc:
+            die(f"{method} {path}: HTTP {exc.code} {exc.read().decode(errors='replace')[:300]}")
+        raise AssertionError
+
+    def up(self) -> bool:
+        try:
+            with urllib.request.urlopen(self.base + "/api/health", timeout=2) as resp:  # noqa: S310
+                return json.loads(resp.read()).get("ok") is True
+        except (OSError, ValueError):
+            return False
+
+    def start(self) -> None:
+        if self.up():
+            return
+        env = dict(os.environ)
+        if ENV_FILE.exists():
+            for line in ENV_FILE.read_text().splitlines():
+                k, sep, v = line.partition("=")
+                if sep and not k.strip().startswith("#"):
+                    env[k.strip()] = v.strip().strip("'\"")
+        if env.get("MUSE_PROVIDER", "claude-code") != "claude-code":
+            env.setdefault("MUSE_API_KEY", env.get("ANTHROPIC_API_KEY", ""))
+        env["MUSE_HEADLESS"] = "false" if (self.dir / "visible").exists() else "true"
+        log = (self.dir / "runs" / "server.log").open("a")
+        proc = subprocess.Popen(
+            ["nix", "develop", "--quiet", "-c", "nanomuse", "serve", "-c", str(self.config),
+             "--no-qr"],
+            cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+            start_new_session=True,
+        )  # fmt: skip
+        (self.dir / "server.pid").write_text(str(proc.pid))
+        for _ in range(180):
+            if self.up():
+                print(f"started {self.name} on {self.base}", file=sys.stderr)
+                return
+            if proc.poll() is not None:
+                break
+            time.sleep(1)
+        die(f"{self.name} did not start; see {self.dir / 'runs/server.log'}")
+
+    def stop(self) -> None:
+        pid_file = self.dir / "server.pid"
+        if pid_file.exists():
+            try:
+                os.killpg(int(pid_file.read_text()), signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            pid_file.unlink()
+        print(f"stopped {self.name}")
+
+    def visible(self, on: bool) -> None:
+        flag = self.dir / "visible"
+        if on:
+            flag.touch()
+        else:
+            flag.unlink(missing_ok=True)
+        if self.up():
+            self.stop()
+            for _ in range(30):
+                if not self.up():
+                    break
+                time.sleep(0.5)
+            self.start()
+        print(f"{self.name}: browser {'visible' if on else 'headless'}")
+
+    def console(self) -> str:
+        return f"{self.base}/#token={self.setting('token')}"
+
+    # ------------------------------------------------------------------ the conversation
+    def thread(self, new: bool = False) -> str:
+        f = self.dir / "thread"
+        if new or not f.exists():
+            tid = self.api("POST", "/api/threads", {"title": "research"})["id"]
+            f.write_text(tid)
+            (self.dir / "seen").unlink(missing_ok=True)
+        return f.read_text().strip()
+
+    def say(self, text: str, new: bool = False) -> None:
+        self.start()
+        tid = self.thread(new)
+        self.mark_seen(tid)
+        self.api("POST", f"/api/threads/{tid}/send", {"text": text})
+        self.wait(tid)
+
+    def mark_seen(self, tid: str) -> set[str]:
+        events = self.api("GET", f"/api/threads/{tid}/events?limit=1000")["events"]
+        seen = {e["id"] for e in events}
+        (self.dir / "seen").write_text("\n".join(seen))
+        return seen
+
+    def wait(self, tid: str | None = None) -> None:
+        if not self.up():
+            die(f"{self.name} is not running; `muse-agent say {self.name} ...` starts it")
+        tid = tid or self.thread()
+        seen_file = self.dir / "seen"
+        seen = set(seen_file.read_text().split()) if seen_file.exists() else set()
+        deadline = time.time() + WAIT_S
+        time.sleep(1)
+        while True:
+            data = self.api("GET", f"/api/threads/{tid}/events?limit=1000")
+            for ev in data["events"]:
+                if ev["id"] not in seen and ev.get("type") != "user":
+                    seen.add(ev["id"])
+                    show(ev)
+            seen_file.write_text("\n".join(seen))
+            stop = self.blocked(tid, data["events"])
+            if stop:
+                print(stop)
+                return
+            meta = data["thread"]
+            if not meta.get("busy") and not meta.get("queued"):
+                print(f"[idle] the agent finished; report: {self.dir / 'workspace/report.md'}")
+                return
+            if time.time() > deadline:
+                print(f"[working] still busy after {WAIT_S:g} s; run: muse-agent wait {self.name}")
+                return
+            time.sleep(2)
+
+    def blocked(self, tid: str, events: list[dict]) -> str:
+        """What the agent waits for from outside, as the next step to take; empty if nothing."""
+        n = self.name
+        for ev in events:
+            if ev.get("status") != "pending":
+                continue
+            if ev.get("type") == "question":
+                return f'[question] answer with: muse-agent say {n} "<answer>"'
+            if ev.get("type") == "approval":
+                return f"[approval {ev['id']}] answer with: muse-agent approve {n} {ev['id']} yes|no"
+        for hold in self.api("GET", "/api/holds"):
+            if hold.get("thread") == tid and hold.get("status") == "on":
+                return (
+                    f"[hand-over] {hold.get('reason') or 'the page needs a person'}: the person "
+                    f"opens {self.console()} , does it on the page, presses Done there "
+                    f"(or you run: muse-agent done {n})"
+                )
+        return ""
+
+    def done(self) -> None:
+        tid = self.thread()
+        for hold in self.api("GET", "/api/holds"):
+            if hold.get("thread") == tid and hold.get("status") == "on":
+                self.api("POST", f"/api/holds/{hold['id']}/done")
+        self.wait(tid)
+
+    def approve(self, approval_id: str, answer: str) -> None:
+        self.api("POST", f"/api/approvals/{approval_id}", {"approved": answer == "yes"})
+        self.wait()
+
+    def executable(self) -> str:
+        """The agent's own Chromium; added to an agent made before there was the setting."""
+        try:
+            return self.setting("executable")
+        except KeyError:
+            text = self.config.read_text()
+            line = f'executable = "{CHROMIUM}"\n'
+            self.config.write_text(text.replace("[server]", line + "\n[server]", 1))
+            return CHROMIUM
+
+    def login(self, url: str) -> None:
+        if self.up():
+            die(f"{self.name} is running and holds its browser; muse-agent stop {self.name} first")
+        exe = self.executable()
+        if not exe:
+            die("no chromium on PATH; logins need your own Chromium")
+        print("Chromium opens on this agent's profile. Sign in, then close the window.")
+        profile = self.dir / "workspace/browser-profile"
+        profile.mkdir(parents=True, exist_ok=True)
+        # a plain Chromium, not Playwright's: no automation flag, the keyring for the cookies
+        subprocess.run([exe, f"--user-data-dir={profile}", url], check=True)
+        print(f"saved {self.name}'s login")
+
+    def import_logins(self) -> None:
+        if self.up():
+            die(f"{self.name} is running and holds its browser; muse-agent stop {self.name} first")
+        if (CHROMIUM_DIR / "SingletonLock").is_symlink():
+            die("your Chromium is open; close it first so its logins are copied whole")
+        if not (CHROMIUM_DIR / "Local State").exists():
+            die(f"no Chromium profile at {CHROMIUM_DIR} (set MUSE_CHROMIUM_DIR)")
+        if not self.executable():
+            die("no chromium on PATH; your logins only open in your own Chromium")
+        dest = self.dir / "workspace/browser-profile"
+        shutil.rmtree(dest, ignore_errors=True)
+        shutil.copytree(CHROMIUM_DIR, dest, ignore=SKIP, symlinks=True)
+        print(f"copied your Chromium's logins into {self.name}")
+
+
+def show(ev: dict) -> None:
+    kind = ev.get("type")
+    if kind == "assistant" and ev.get("text") and not ev.get("quiet"):
+        print(f"[agent] {ev['text']}")
+    elif kind == "question":
+        print(f"[agent asks] {ev.get('text')}")
+    elif kind == "tool":
+        print(f"  · {ev.get('tool')} {ev.get('summary') or ''}".rstrip())
+    elif kind == "browser":
+        print(f"  · page: {ev.get('title') or ''} {ev.get('url') or ''}".rstrip())
+    elif kind == "approval":
+        print(f"[wants approval] {ev.get('tool')} {ev.get('summary')} ({ev.get('risk')})")
+    elif kind == "notice":
+        print(f"  ! {ev.get('text')}")
+
+
+def main(argv: list[str]) -> None:
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    if len(argv) < 1 or argv[0] in ("-h", "--help"):
+        die(__doc__ or "", 2)
+    cmd, rest = argv[0], argv[1:]
+    if cmd == "list":
+        for d in sorted(ROOT.glob("*/config.toml")):
+            a = Agent(d.parent.name)
+            print(f"{a.name}\t{'running ' + a.base if a.up() else 'stopped'}")
+        return
+    if not rest:
+        die(__doc__ or "", 2)
+    agent = Agent(rest[0])
+    if cmd == "init":
+        return agent.init()
+    agent.need()
+    if cmd == "say" and len(rest) >= 2:
+        agent.say(" ".join(a for a in rest[1:] if a != "--new"), new="--new" in rest)
+    elif cmd == "wait":
+        agent.wait()
+    elif cmd == "approve" and len(rest) == 3 and rest[2] in ("yes", "no"):
+        agent.approve(rest[1], rest[2])
+    elif cmd == "done":
+        agent.done()
+    elif cmd in ("show", "hide"):
+        agent.visible(cmd == "show")
+    elif cmd == "console":
+        print(agent.console())
+    elif cmd == "login" and len(rest) == 2:
+        agent.login(rest[1])
+    elif cmd == "import":
+        agent.import_logins()
+    elif cmd == "stop":
+        agent.stop()
+    else:
+        die(__doc__ or "", 2)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

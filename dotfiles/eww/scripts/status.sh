@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# JSON of toggle/indicator state. Host facts: battery BAT1, wifi via nmcli.
+# JSON of toggle/indicator state. Host fact: battery BAT1.
 vol=$(pamixer --get-volume 2>/dev/null || echo 0)
 [ "$(pamixer --get-mute 2>/dev/null)" = "true" ] && muted=true || muted=false
 
@@ -7,26 +7,7 @@ bcap=$(cat /sys/class/power_supply/BAT1/capacity 2>/dev/null || echo 0)
 bstat=$(cat /sys/class/power_supply/BAT1/status 2>/dev/null || echo Unknown)
 case "$bstat" in Charging|Full) charging=true ;; *) charging=false ;; esac
 
-ssid=$(nmcli -t -f NAME connection show --active 2>/dev/null | grep -viE '^(lo|tailscale)' | head -1)
-net=${ssid:-Disconnected}
-
-if bluetoothctl show 2>/dev/null | grep -q "Powered: yes"; then
-    bluetoothctl devices Connected 2>/dev/null | grep -q . && bt=connected || bt=on
-else
-    bt=off
-fi
-
-makoctl mode 2>/dev/null | grep -q do-not-disturb && dnd=true || dnd=false
-
-# Device must be named: this box exposes both intel_backlight (the panel, 0-496)
-# and an nvidia_0 stub pinned at 100%, and brightnessctl's unnamed default picks
-# the nvidia one — so the bar reported a permanent 100%. Field 4 is the percent.
-bri=$(brightnessctl -d intel_backlight -m 2>/dev/null | cut -d, -f4 | tr -d '%')
-bri=${bri:-0}
-
 jq -nc \
     --argjson vol "$vol" --argjson muted "$muted" \
     --argjson bcap "$bcap" --argjson charging "$charging" \
-    --arg net "$net" --arg bt "$bt" --argjson dnd "$dnd" \
-    --argjson bri "$bri" \
-    '{vol:$vol, muted:$muted, bcap:$bcap, charging:$charging, net:$net, bt:$bt, dnd:$dnd, bri:$bri}'
+    '{vol:$vol, muted:$muted, bcap:$bcap, charging:$charging}'

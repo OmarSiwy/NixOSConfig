@@ -15,6 +15,10 @@ kmap.set("t", "<C-l>", [[<C-\><C-n><C-w>l]])
 -- Redo
 kmap.set("n", "U", "<C-r>")
 
+-- Bufferline tabs: ALT + k = left, ALT + j = right
+kmap.set("n", "<A-k>", "<cmd>BufferLineCyclePrev<CR>", { silent = true })
+kmap.set("n", "<A-j>", "<cmd>BufferLineCycleNext<CR>", { silent = true })
+
 -- Split navigation using CTRL + {j, k, h, l}
 kmap.set("n", "<c-k>", "<c-w>k")
 kmap.set("n", "<c-j>", "<c-w>j")

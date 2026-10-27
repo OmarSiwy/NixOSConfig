@@ -32,6 +32,8 @@ Done when triage passes on the flattened version. When the data resists being ma
 
 Compile the scalar loop with optimizations on and read the generated assembly (godbolt, or `-S` / `--emit asm`). Compilers autovectorize simple arithmetic loops without complex control flow — but presence of vector instructions is not the bar: the autovectorizer often picks a weaker idiom than the hand-written shape (e.g. widening byte compares into word lanes, halving lane throughput), so benchmark the autovectorized loop against the speed target too.
 
+**Zig depends on the version.** 0.16 and 0.17 ship with LLVM's loop vectorizer disabled, so a plain `for` loop stays scalar (unrolled 8×) and vector code is written by hand (the `zig` skill's `zero-cost.md` has the probes). 0.18 (`zig-overlay` master) turns it back on, and then a plain loop written in the right form matches or beats a SIMD library on maps, reductions and early-exit searches. The right forms, measured, are in [`zig.md`](zig.md) § Plain loops under 0.18. A strict float sum still stays scalar on every version, because vectorizing it reassociates; that is the one place gated fast-math pays. **Rust** autovectorizes integer and store loops, but not a float reduction under strict ordering; on stable, explicit SIMD goes through `fearless_simd` ([`rust.md`](rust.md)).
+
 Hand-written SIMD earns its place when the autovectorized loop misses the speed target, or when the loop matters enough that the vectorization should be explicit and predictable — so an unrelated edit or compiler upgrade can't quietly turn it back into a scalar loop.
 
 Done when you can state both whether vector instructions are present and whether the loop meets the speed target. Both yes → the work is done. Vectorized but slow → write the shape.
@@ -55,6 +57,8 @@ Parts 1, 2, 3 and 5 look nearly identical across completely different algorithms
 | checking whether all/any elements qualify | a reduce-and / reduce-or to a single bool |
 | writing a transformed output | a plain store of the result vector; no reduction at all |
 
+Float `@max`/`@min` (Zig) and `f64::max` (Rust) return the non-NaN operand, so a max-reduction norm silently drops a NaN even in strict mode. A convergence norm built that way accepts a NaN update. Reduce the bit pattern instead ([`zig.md`](zig.md)), or check finiteness separately.
+
 Read [`zig.md`](zig.md) before writing Zig vector code, or [`rust.md`](rust.md) before writing Rust — each carries the builtin and API names for all five parts, the lane-count query, worked examples of two different reduce kinds, and the target-CPU flags that decide whether any of it lowers to real vector instructions.
 
 ## Verify
@@ -62,12 +66,14 @@ Read [`zig.md`](zig.md) before writing Zig vector code, or [`rust.md`](rust.md) 
 Two checks, both required:
 
 - **Differential test** against the retained scalar version on random inputs, sweeping lengths from 0 through at least three times the lane count so every tail boundary and the empty case get exercised.
-- **Benchmark** both versions on input of realistic length. Keep results observable — `std.mem.doNotOptimizeAway` (Zig) / `std::hint::black_box` (Rust) — or the optimizer elides the work; a two-orders-of-magnitude "speedup" means it did. Zig 0.16: `std.time.Timer` lives behind `std.Io`.
+- **Benchmark** both versions on input of realistic length. Keep results observable — `std.mem.doNotOptimizeAway` (Zig) / `std::hint::black_box` (Rust) — or the optimizer elides the work; a two-orders-of-magnitude "speedup" means it did. Zig 0.17 times through `std.Io`: `std.Io.Timestamp.now(io, .awake)`.
 
 Done when outputs match at every length and the benchmark shows a speedup. A vectorized loop that measures slower is a normal outcome — report the number and keep the scalar version.
 
 ## When the shape does not fit
 
 Some problems need SIMD techniques well outside the shape, and recognizing one early saves a wasted afternoon. Signals: elements of variable width so lane K's position depends on lanes before it (UTF-8, UTF-16); a genuine chain that survived triage; classification against many constants at once.
+
+Each of those is a named **wall** — lane independence, or output shape. Before attacking the wall inside one stream, look for a lane axis across streams: N independent instances of the same chain (N circuits, N files, N parses) vectorize with no wall at all — the `zig` or `rust` skill's `simd-first.md` shapes that kernel. When there is only one stream, the wall-breaking techniques are shuffle-based classification, prefix scans, and data-dependent output length.
 
 The published solutions are worth reading rather than reinventing — table-driven shuffle masks that realign ragged data into fixed lanes (simdutf), prefix-XOR via carry-less multiply and nibble-table classification with `pshufb` (simdjson). For text encoding and JSON specifically, linking one of those libraries beats writing it.

@@ -35,6 +35,10 @@ in
 {
   environment.systemPackages = [ setPowerprofile ];
 
+  # Appgate SDP VPN (university CAD access). NixOS module, not home-manager:
+  # it needs the root appgatedriver service, system D-Bus policy and tun.
+  programs.appgate-sdp.enable = true;
+
   # Let the eww panel run just this one helper without a password prompt.
   security.sudo.extraRules = [
     {
@@ -52,9 +56,6 @@ in
     seatd.enable = false; # broken Type=notify -> systemd kills it every 90s -> river loses seat0 -> crash. logind handles seats.
 
     speechd.enable = lib.mkForce false; # ponytail: graphical-desktop default pulls speech-dispatcher -> 645MB mbrola-voices we don't use
-
-    # Tailscale
-    tailscale.enable = true;
 
     # TLP - Advanced power management
     tlp = {

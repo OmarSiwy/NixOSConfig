@@ -1,12 +1,10 @@
 ;; ── Tokyo Night side bar ────────────────────────────────────────
 ;; Strip styled after https://github.com/raexera/tokyo (bspwm/X11), ported to
-;; river+rill on Wayland and kept on the right edge. The hover panel behind it
-;; is the previous dock's, retained: tokyo's own bar had no media, metrics,
-;; notifications or power profiles and dropping them was a regression.
+;; river+rill on Wayland and kept on the right edge. No slide-out panel: every
+;; control sits in the strip as an icon (click / right-click / scroll; the
+;; tooltips say which).
 ;;
-;; Port notes: X11 `:reserve (struts ...)` -> a separate :exclusive strut window
-;; (the visible bar floats because it grows on hover, so it can't reserve);
-;; `bspc` workspace query -> rill's state file (pkgs/rill/src/state.zig);
+;; Port notes: `bspc` workspace query -> rill's state file (pkgs/rill/src/state.zig);
 ;; amixer -> pamixer, kitty -> ghostty, betterlockscreen -> swaylock.
 ;;
 ;; GLYPHS: only U+F0000-plane (Material Design) Nerd Font icons here. The
@@ -14,25 +12,17 @@
 ;; editing path and silently turns into blank labels.
 
 ;; ── Data sources ────────────────────────────────────────────────
-(deflisten media :initial '{"status":"","title":"Nothing playing","artist":"","art":""}'
+(deflisten media :initial '{"status":"","title":"","artist":"","art":""}'
   "/home/omare/.config/eww/scripts/media.sh")
+(defpoll mpos :interval "1s" :initial "0"
+  "playerctl metadata --format '{{ position / mpris:length * 100 }}' 2>/dev/null || echo 0")
 (defpoll sys :interval "3s" :initial '{"cpu":0,"mem":0,"temp":0}'
   "/home/omare/.config/eww/scripts/sysinfo.sh")
 (defpoll st  :interval "2s"
-  :initial '{"vol":0,"muted":false,"bcap":0,"charging":false,"net":"Disconnected","bt":"off","dnd":false,"bri":0}'
+  :initial '{"vol":0,"muted":false,"bcap":0,"charging":false}'
   "/home/omare/.config/eww/scripts/status.sh")
-(defpoll clk   :interval "10s" "date '+%H:%M'")
 (defpoll hour  :interval "10s" "date '+%H'")
 (defpoll min   :interval "10s" "date '+%M'")
-(defpoll cdate :interval "60s" "date '+%a, %b %d'")
-(defpoll greeting :interval "300s"
-  "h=$(date +%H); if [ $h -lt 12 ]; then echo 'Good morning'; elif [ $h -lt 18 ]; then echo 'Good afternoon'; else echo 'Good evening'; fi")
-;; platform_profile, not scaling_governor: intel_pstate idles at governor
-;; "powersave" no matter which mode you picked, so the governor made the
-;; Power-saver button read as permanently active. Only set-powerprofile writes
-;; platform_profile (TLP leaves it alone), so it tracks the chosen mode.
-(defpoll prof :interval "5s" "cat /sys/firmware/acpi/platform_profile 2>/dev/null")
-(defpoll notifs :interval "3s" :initial "[]" "/home/omare/.config/eww/scripts/notifs.sh")
 
 ;; 10 chars, one per rill workspace: f=focused, o=occupied, e=empty.
 (defpoll ws :interval "200ms" :initial "feeeeeeeee"
@@ -44,185 +34,75 @@
 (defpoll calendar_month :interval "1h" "date '+%-m'")
 (defpoll calendar_year  :interval "1h" "date '+%Y'")
 
-;; Hover state: drives the slide-out panel (shared by strip + panel eventboxes).
-(defvar dock_hover false)
-
 ;; ── Strip: workspaces ───────────────────────────────────────────
 ;; Indicator only: rill takes no commands (no IPC), so these can't be clicked to
 ;; switch. Super+1..0 is still the way. Wire clicks up if rill grows a socket.
 (defwidget workspaces []
-  (box :class "works" :orientation "v" :space-evenly false :halign "center"
+  ;; No :halign here: centering shrinks the pill to the dots' width.
+  (box :class "works" :orientation "v" :space-evenly false
     (for i in '[0,1,2,3,4,5,6,7,8,9]'
       (label :class "ws ${substring(ws, i, 1)}" :halign "center"
              :text {substring(ws, i, 1) == "e" ? "󰝦" : "󰝥"}))))
 
 ;; ── Strip ───────────────────────────────────────────────────────
-;; Indicators only — every control lives in the panel one hover away, so the
-;; strip never needs a click target narrower than the bar itself.
+;; One icon per control. Unset optional actions are empty strings -> no-op.
+(defwidget ctl [icon tip ?class ?click ?rclick ?scroll]
+  (eventbox :class "ctl ${class}" :tooltip tip :cursor "pointer"
+            :onclick click :onrightclick rclick :onscroll scroll
+    (label :halign "center" :text icon)))
+
 (defwidget strip []
   (box :class "strip" :orientation "v" :space-evenly false :valign "fill" :vexpand true
     (button :class "launcher-icon" :halign "center"
             :onclick "setsid -f fuzzel" "󱄅")
     (workspaces)
-    (box :vexpand true)
     ;; Wrapped: the systray fills whatever width it is given, so on its own it
-    ;; sits flush-left in the 30px column instead of centered like everything
-    ;; else. The wrapper box is what actually centers it.
-    (box :halign "center"
+    ;; sits flush-left in the 30px column. The wrapper box centers it.
+    ;; nm-applet lives here (started in river/scripts/process.sh).
+    (box :class "tray-box" :halign "center"
       (systray :class "tray" :orientation "v" :spacing 8 :icon-size 15
                :prepend-new false))
-    (box :class "control" :orientation "v" :space-evenly false :spacing 10
-      (label :class "ic net" :halign "center" :tooltip {st.net}
-             :text {st.net != "Disconnected" ? "󰖩" : "󰖪"})
-      (label :class "ic vol" :halign "center" :tooltip "Volume: ${st.vol}%"
-             :text {st.muted ? "󰖁" : "󰕾"})
-      (label :class "ic bri" :halign "center" :tooltip "Brightness: ${st.bri}%"
-             :text "󰃠")
+    (box :vexpand true)
+
+    ;; Now playing: cover art inside a ring that fills with track progress;
+    ;; dimmed when paused. Title/artist in the tooltip. Click play/pause,
+    ;; scroll skips. Note glyph stands in when the player gives no art.
+    (eventbox :class "media" :visible {media.status != ""} :cursor "pointer"
+              :tooltip "${media.title} — ${media.artist}"
+              :onclick "playerctl play-pause; eww poll mpos"
+              :onscroll "[ {} = up ] && playerctl previous || playerctl next"
+      (circular-progress :class "media-ring" :value mpos :thickness 2 :start-at 75
+                         :halign "center"
+        (box :class {media.status == "Playing" ? "cover" : "cover paused"}
+             :style {media.art != "" ? "background-image: url('${media.art}');" : ""}
+          (label :class "cover-ic" :visible {media.art == ""} :text "󰝚"))))
+
+    (box :class "group" :orientation "v" :space-evenly false
+      (ctl :class "vol" :icon {st.muted ? "󰖁" : "󰕾"}
+           :tip "Volume ${st.vol}% — scroll: adjust, click: mute, right-click: mixer"
+           :click "pamixer -t; eww poll st"
+           :rclick "setsid -f pavucontrol"
+           :scroll "[ {} = up ] && pamixer -i 5 || pamixer -d 5; eww poll st")
+      (ctl :class "sys" :icon "󰻠"
+           :tip "CPU ${sys.cpu}%  Mem ${sys.mem}%  ${sys.temp}°C — click: btop"
+           :click "setsid -f ghostty -e btop")
+      (ctl :class "sys" :icon "󰃢"
+           :tip "Nix cleanup — click: GC, optimise, rebuild boot"
+           :click "setsid -f ghostty -e sh -c 'sudo nix-collect-garbage -d; nix-collect-garbage -d; sudo nix-store --optimise; sudo nixos-rebuild boot --flake /home/omare/Documents/Desktop/nixos#omare; du -sh /nix/store; read -p Done'")
       (box :orientation "v" :space-evenly false :tooltip "Battery: ${st.bcap}%"
-        (label :class "ic bat" :halign "center"
+        (label :class {st.bcap <= 15 ? "ic bat low" : "ic bat"} :halign "center"
                :text {st.charging ? "󰂄" :
                       st.bcap <= 15 ? "󰁻" :
                       st.bcap <= 40 ? "󰁾" : "󰁹"})
         (label :class "pct" :halign "center" :text "${st.bcap}")))
+
     (box :class "time" :orientation "v" :space-evenly false
       (button :class "time-hour" :halign "center"
               :onclick "eww open --toggle calendar" hour)
       (button :class "time-min" :halign "center"
               :onclick "eww open --toggle calendar" min))
-    (button :class "button-off" :halign "center"
+    (button :class "button-off" :halign "center" :tooltip "Power menu"
             :onclick "setsid -f /home/omare/.config/fuzzel/powermenu.sh" "⏻")))
-
-;; ── Panel (revealed on hover) ───────────────────────────────────
-(defwidget metric [icon name val]
-  (box :class "metric" :orientation "h" :space-evenly false :spacing 10
-    (label :class "metric-ic" :text icon)
-    (box :orientation "v" :space-evenly false :hexpand true
-      (box :orientation "h" :space-evenly false
-        (label :halign "start" :hexpand true :text name)
-        (label :halign "end" :text "${val}%"))
-      (progress :class "bar" :value val :orientation "h"))))
-
-(defwidget panel []
-  (box :class "panel" :orientation "v" :space-evenly false :spacing 16
-    ;; Header
-    (box :class "header" :orientation "h" :space-evenly false :valign "start"
-      (box :orientation "v" :space-evenly false :hexpand true
-        (label :class "greeting" :halign "start" :text greeting)
-        (label :class "big-clock" :halign "start" :text clk)
-        (label :class "date" :halign "start" :text cdate))
-      (box :class {st.bcap <= 15 ? "bat-pill low" : "bat-pill"} :valign "start" :space-evenly false :spacing 6
-        (label :class "bat-ic" :text {st.charging ? "󰂄" : st.bcap <= 15 ? "󰁻" : st.bcap <= 40 ? "󰁾" : "󰁹"})
-        (label :class "bat-pct" :text "${st.bcap}%")))
-
-    ;; Media
-    (box :class "card" :orientation "v" :space-evenly false :spacing 10
-      (box :class "card-title" :orientation "h" :halign "start" :space-evenly false :spacing 8
-        (label :class "music-ic" :text "󰎆")
-        (label :text "NOW PLAYING"))
-      (box :orientation "h" :space-evenly false :spacing 12
-        ;; Cover art disabled: eww's gdk-pixbuf on NixOS won't render the
-        ;; converted PNG reliably, so just show the gradient + note tile.
-        (box :class "cover-ph" (label :class "cover-ic" :text "󰝚"))
-        (box :orientation "v" :space-evenly false :valign "center" :hexpand true
-          (label :class "track"  :halign "start" :limit-width 22 :text {media.title})
-          (label :class "artist" :halign "start" :limit-width 24 :text {media.artist})))
-      (box :class "controls" :halign "center" :spacing 22
-        (button :class "ctrl" :onclick "playerctl previous" "󰒮")
-        (button :class "ctrl play" :onclick "playerctl play-pause"
-          {media.status == "Playing" ? "󰏤" : "󰐊"})
-        (button :class "ctrl" :onclick "playerctl next" "󰒬")))
-
-    ;; System
-    (box :class "card" :orientation "v" :space-evenly false :spacing 10
-      (label :class "card-title" :halign "start" :text "SYSTEM")
-      (metric :icon "󰻠" :name "CPU" :val {sys.cpu})
-      (metric :icon "󰍛" :name "Memory" :val {sys.mem})
-      (box :orientation "h" :space-evenly false :spacing 10
-        (label :class "metric-ic" :text "󰔏")
-        (label :halign "start" :hexpand true :text "Temperature")
-        (label :halign "end" :text "${sys.temp}°C")))
-
-    ;; Network — the row shows the SSID instead of hiding it behind a tooltip,
-    ;; and left-click gets the GUI editor; nmtui in a terminal is the fallback,
-    ;; not the default.
-    (box :class "card" :orientation "v" :space-evenly false :spacing 10
-      (box :orientation "h" :space-evenly false
-        (label :class "card-title" :halign "start" :hexpand true :text "NETWORK")
-        (button :class "mini-btn" :onclick "setsid -f ghostty -e nmtui" "󰆍  nmtui"))
-      (button :class "net-row" :onclick "setsid -f nm-connection-editor"
-        (box :orientation "h" :space-evenly false :spacing 12
-          (label :class {st.net != "Disconnected" ? "net-ic on" : "net-ic"}
-                 :text {st.net != "Disconnected" ? "󰖩" : "󰖪"})
-          (label :class "net-name" :halign "start" :hexpand true :limit-width 24
-                 :text {st.net}))))
-
-    ;; Quick toggles  (bluetooth: left-click opens manager, right-click toggles power)
-    (box :class "card" :orientation "v" :space-evenly false :spacing 8
-      (label :class "card-title" :halign "start" :text "QUICK TOGGLES")
-      (box :class "toggles" :halign "center" :spacing 12
-        (button :class {st.bt != "off" ? "tg on" : "tg"}
-                :tooltip "Bluetooth — right-click toggles power"
-                :onclick "setsid -f blueman-manager"
-                :onrightclick "/home/omare/.config/eww/scripts/bt-toggle.sh; eww poll st" "󰂯")
-        (button :class {st.dnd ? "tg on" : "tg"} :tooltip "Do not disturb"
-                :onclick "makoctl mode -t do-not-disturb; eww poll st" "󰂚")
-        (button :class "tg" :tooltip "Audio mixer"
-                :onclick "setsid -f pavucontrol" "󰒖")))
-
-    ;; Sound + brightness
-    (box :class "card" :orientation "v" :space-evenly false :spacing 10
-      (label :class "card-title" :halign "start" :text "SOUND & DISPLAY")
-      (box :orientation "h" :space-evenly false :spacing 12
-        (button :class "snd-ic" :onclick "pamixer -t; eww poll st" {st.muted ? "󰖁" : "󰕾"})
-        (scale :class "vol-scale" :hexpand true :value {st.vol} :min 0 :max 101
-               :onchange "pamixer --set-volume {}")
-        (label :class "vol-pct" :text "${st.vol}%"))
-      ;; -d intel_backlight is mandatory — the unnamed default resolves to the
-      ;; nvidia_0 stub, not the panel (see status.sh). min 5 so the slider can't
-      ;; black the screen out with no way to see it back.
-      (box :orientation "h" :space-evenly false :spacing 12
-        (label :class "snd-ic" :text "󰃠")
-        (scale :class "bri-scale" :hexpand true :value {st.bri} :min 5 :max 101
-               :onchange "brightnessctl -d intel_backlight set {}%")
-        (label :class "vol-pct" :text "${st.bri}%")))
-
-    ;; Power profile  (CPU governor; needs the sudo helper from services.nix)
-    (box :class "card" :orientation "v" :space-evenly false :spacing 10
-      (label :class "card-title" :halign "start" :text "POWER PROFILE")
-      (box :class "profiles" :space-evenly true :spacing 10
-        (button :class {prof == "performance" ? "prof on" : "prof"}
-                :tooltip "Max clocks, EPP=performance, EC envelope wide open"
-                :onclick "sudo set-powerprofile performance; eww poll prof" "󰓅  Performance")
-        (button :class {prof == "low-power" ? "prof on" : "prof"}
-                :tooltip "EPP=power, EC in low-power — quietest and coolest"
-                :onclick "sudo set-powerprofile powersave; eww poll prof" "󰌪  Power-saver")))
-
-    ;; Notifications (recent, from makoctl history)
-    (box :class "card" :orientation "v" :space-evenly false :spacing 8
-      (box :orientation "h" :space-evenly false
-        (label :class "card-title" :halign "start" :hexpand true :text "NOTIFICATIONS")
-        (button :class "mini-btn" :onclick "setsid -f /home/omare/.config/eww/scripts/clear-notifs.sh" "󰎟  Clear"))
-      (label :class "notif-empty" :halign "start" :visible {arraylength(notifs) == 0}
-             :text "Nothing recent")
-      ;; Height comes from CSS: `:height` is not a scroll property here, and
-      ;; without a min-height the scroll collapses to nothing inside the card.
-      (scroll :class "notif-list" :vscroll true :visible {arraylength(notifs) > 0}
-        (box :orientation "v" :space-evenly false :spacing 6
-          (for n in notifs
-            (box :class "notif" :orientation "v" :space-evenly false
-              (label :class "notif-app" :halign "start" :text {n.app})
-              (label :class "notif-sum" :halign "start" :limit-width 34 :wrap true :text {n.summary}))))))
-
-    (box :vexpand true)
-    (box :class "power-row" :halign "center" :spacing 18
-      (button :class "button-lock" :tooltip "Lock"
-              :onclick "setsid -f swaylock -f -c 1a1b26" "󰌾")
-      (button :class "button-quit" :tooltip "Logout"
-              :onclick "loginctl terminate-session $XDG_SESSION_ID" "󰗽")
-      (button :class "button-reb" :tooltip "Reboot"
-              :onclick "systemctl reboot --no-block" "󰜉")
-      (button :class "button-off" :tooltip "Shutdown"
-              :onclick "systemctl poweroff --no-block" "⏻"))))
 
 ;; ── Calendar popup ──────────────────────────────────────────────
 (defwidget cal []
@@ -232,44 +112,21 @@
                 :month calendar_month :year calendar_year))))
 
 ;; ── Windows ─────────────────────────────────────────────────────
-;; ONE content-sized window: slim strip always visible on the right, the full
-;; panel slides out to its left on hover. Single eventbox = no flicker. No fixed
-;; width, so collapsed it is just the strip; expanded it grows to fit the panel.
-(defwidget dock []
-  (eventbox :onhover "eww update dock_hover=true"
-            :onhoverlost "eww update dock_hover=false"
-    (box :orientation "h" :space-evenly false :valign "fill"
-      (revealer :transition "slideleft" :reveal dock_hover :duration "250ms"
-        (panel))
-      (strip))))
-
+;; Fixed 30px, never grows, so it reserves its own lane (:exclusive) and rill
+;; indents tiled windows past it.
 (defwindow dock
   :monitor 0
-  ;; :x must equal the strut width below: a negative gtk-layer-shell margin that
-  ;; overlaps the reserved lane, so the strip sits at the true right edge instead
-  ;; of being pushed left of the lane it reserved.
-  :geometry (geometry :x "-30px" :height "100%" :anchor "center right")
-  :stacking "overlay"
-  :exclusive false
-  :focusable "ondemand"
-  (dock))
-
-;; ── Exclusive strut ─────────────────────────────────────────────
-;; The visible dock floats and expands on hover, so it can't reserve space
-;; itself (the reserved zone would jump on every hover). This invisible sibling
-;; reserves the slim lane so rill indents tiled windows past the strip.
-;; ponytail: 30px == the strip's own width; bump both together if it widens.
-(defwindow strut
-  :monitor 0
   :geometry (geometry :width "30px" :height "100%" :anchor "center right")
-  :stacking "bottom"
+  ;; "foreground" (layer-shell top), not "overlay": river draws fullscreen
+  ;; windows between the two, so a fullscreen app covers the dock on its output.
+  :stacking "foreground"
   :exclusive true
   :focusable false
-  (box))
+  (strip))
 
 (defwindow calendar
   :monitor 0
-  ;; x = strut width + a gap, so it opens just inboard of the clock it belongs to.
+  ;; x = bar width + a gap, so it opens just inboard of the clock it belongs to.
   :geometry (geometry :x "40px" :y "20px" :width "270px" :anchor "bottom right")
   :stacking "overlay"
   :focusable "ondemand"

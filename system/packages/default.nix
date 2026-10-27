@@ -126,6 +126,7 @@ in
       wirelesstools
       wireless-regdb
       openconnect # School VPN
+      tlclient # ThinLinc remote desktop client
       samba # NOT a Wine dep — keep only if you use SMB shares / NTLM auth
 
       # ── Media & entertainment ──
@@ -136,6 +137,7 @@ in
       karere # WhatsApp
 
       # ── Communication ──
+      chromium
       slack
       teams-for-linux
       vesktop-wrapped # Discord, WebRTC pinned to default iface (see let-binding)

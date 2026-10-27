@@ -1,6 +1,6 @@
 ---
 name: data-oriented-design
-description: Data-oriented design for code layout, architecture, and performance. Use when writing Rust, Zig, or C code; designing entity/component systems; choosing or reviewing struct layouts and data structures; optimizing or profiling hot code; or when the user mentions DOD, cache, SoA, ECS, data layout, latency, branch prediction, or profiling.
+description: Data-oriented design — the data layout decides the code. Use when designing or reviewing struct layouts, SoA/AoS, entity or component tables, or field widths; when optimizing or profiling a hot path; or when the user mentions DOD, cache misses, ECS, or latency.
 ---
 
 # Data-Oriented Design
@@ -78,7 +78,7 @@ Optimizing or profiling hot code → [measurement.md](measurement.md): profile-f
   This is where SoA pays off twice: an `id: u32, hp: u16, team: u8` row costs 7 bytes packed in parallel arrays and 12 padded as a struct — nearly twice the entities per cache line for free. Index types follow the same rule: an arena capped at 65k entries is indexed by `u16`, not `usize`. Reserving the max value as a niche (`u16::MAX` = none, or `NonZero`) buys the `Option` back for zero bytes.
 
   Narrower is not free in two places, both checkable: an accumulator must be wide enough for the *sum*, not the element (summing `u8` into `u8` overflows), and a field whose range grows later is a breaking change — widen deliberately, don't pre-widen defensively.
-- **Encode, don't polymorphize** — ranked, not interchangeable: existence-based table split (separate array per kind) first; closed `enum` + `match` on a tag only when kinds are few and bodies small; `dyn`/vtable only for genuinely open, cold sets. Ranking rationale: the design-patterns skill.
+- **Encode, don't polymorphize** — ranked, not interchangeable: existence-based table split (separate array per kind) first; closed `enum` + `match` on a tag only when kinds are few and bodies small; `dyn`/vtable only for genuinely open, cold sets. The full ladder with each rung's cost: the `codebase-clean-code` skill's `LADDER.md`.
 
 ## Review Checklist
 
@@ -100,5 +100,7 @@ Auto-detect project language, load the companion:
 |----------|-----------|---------------|
 | Rust | [rust.md](rust.md) | `soa_derive`, `slotmap`, `bumpalo`, `rayon`, `enum` + `match`, `NonZero*` |
 | Zig | [zig.md](zig.md) | `MultiArrayList`, `enum(u32)`, `packed struct`, `ArenaAllocator`, `@Vector` |
+
+The companions cover layout. Writing the language itself (idioms, memory discipline, the zero-cost probe) is the `zig` or `rust` skill.
 
 See [foundations.md](foundations.md) for the theory (Acton, Kelley, Muratori — Parts I–III).

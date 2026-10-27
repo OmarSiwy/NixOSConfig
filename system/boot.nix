@@ -31,6 +31,7 @@
     kernelModules = [
       "v4l2loopback"
       "tcp_bbr"
+      "ntsync" # /dev/ntsync, Proton 10+ uses it for faster Wine sync
     ];
 
     initrd = {

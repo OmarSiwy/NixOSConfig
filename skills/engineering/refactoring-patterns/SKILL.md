@@ -1,7 +1,10 @@
 ---
 name: refactoring-patterns
-description: Fowler-based refactoring and enterprise patterns. Use when refactoring existing code, fixing code smells, designing repository/service layers, reviewing pull requests for structural problems, or when code has Long Method / Feature Envy / Shotgun Surgery smells.
+description: Fowler refactorings and enterprise patterns — smell catalogue, refactoring moves, repository/service layers.
+disable-model-invocation: true
 ---
+
+> Abstraction choices in systems code (which mechanism, at what cost) belong to `codebase-clean-code` and its `LADDER.md`; where this skill and that one disagree, that one wins.
 
 # Refactoring Patterns
 

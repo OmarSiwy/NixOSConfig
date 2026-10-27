@@ -1,7 +1,10 @@
 ---
 name: engineering-at-scale
-description: Scale-aware software engineering heuristics from Google's practices. Use when designing APIs, writing tests, reviewing code, managing dependencies, planning deprecations, or making architecture decisions where codebase size and team count affect the right answer. Triggers: test strategy, code review, dependency management, API design, deprecation, large-scale refactoring, CI policy.
+description: Scale-aware heuristics from Google's practices — tests, review, dependencies, deprecation, large-scale change.
+disable-model-invocation: true
 ---
+
+> Abstraction choices in systems code (which mechanism, at what cost) belong to `codebase-clean-code` and its `LADDER.md`; where this skill and that one disagree, that one wins.
 
 # Engineering at Scale
 

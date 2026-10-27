@@ -1,3 +1,7 @@
+# theme
+background-opacity = 0.85
+background-blur = 30
+
 # Clipboard
 clipboard-read = allow
 clipboard-write = allow

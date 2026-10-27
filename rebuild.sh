@@ -26,5 +26,8 @@ echo '🚀 Running nixos-rebuild...'
 sudo nixos-rebuild switch --flake "$FLAKE_DIR#$HOST" "${@:2}"
 
 echo ''
+echo '🔄 Restarting desktop apps...'
+bash "$FLAKE_DIR/dotfiles/river/scripts/reloadconfig.sh"
+
+echo ''
 echo '✅ Rebuild complete!'
-echo '💡 Restart River or press Super+Shift+R to reload'

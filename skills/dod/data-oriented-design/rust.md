@@ -97,17 +97,18 @@ dispatch without writing the `match` boilerplate, the `enum_dispatch` crate gene
 Rust is the poster child for the operational test in the theory doc: high-level code
 that compiles to what you'd hand-write.
 
-### Iterators monomorphize and often beat naive indexing
+### Iterators monomorphize; measure before claiming they beat indexing
 
 ```rust
 fn energy(xs: &[f64]) -> f64 { xs.iter().map(|x| x * x).sum() }
 ```
 
-`map`/`sum` are inlined; no closure survives to runtime. Because the iterator carries
-the slice length as an invariant, per-element bounds checks are elided and the loop
-autovectorizes — frequently _faster_ than a naive `for i in 0..n { xs[i] }`, which may
-retain a bounds check the optimizer can't always prove away. That is the "negative
-cost" case concretely.
+`map`/`sum` are inlined; no closure survives to runtime. That part is zero-cost. The
+loop is still scalar on Rust 1.95: a float `sum` keeps strict left-to-right ordering, so
+LLVM will not reassociate it into lanes. Indexed loops vectorize as readily as iterator
+loops on 1.95 (LLVM hoists or versions the bounds checks). "Iterators are negative-cost"
+is folklore until a probe says so: the `rust` skill's `zero-cost.md` has the measured
+cases and the probe protocol, and `simd-first.md` has the vectorized float reduction.
 
 ### Type-state: invariants at compile time, zero bytes at runtime
 
@@ -125,7 +126,7 @@ impl File<Open>   { fn read(&self) -> Vec<u8> { /* ... */ }
 
 A newtype wrapper can, in specific cases, defeat autovectorization the underlying type
 would have gotten; `Box<dyn Trait>` and `Arc<T>` are real indirection/atomics, not free.
-So on hot paths, verify with `cargo asm` / godbolt / `criterion` benchmarks rather than
+So on hot paths, verify with the `rust` skill's codegen probe and a `criterion` benchmark rather than
 trusting "zero-cost" as a slogan.
 
 ---

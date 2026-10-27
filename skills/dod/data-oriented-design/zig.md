@@ -1,15 +1,10 @@
-# Zig 0.16.0 — realizing the principles
+# Zig — realizing the principles
 
-Companion to foundations.md. Target compiler: **0.16.0** (shipped 2026-04-14;
-the release that made I/O an interface and standardized the "unmanaged" containers).
-Each section maps a principle from the theory document to Zig mechanics; sections 4–5
-cover the language's intended handling of optionals and errors.
-
-A note on 0.16 container init used throughout: unmanaged containers (ArrayList,
-MultiArrayList, etc.) are initialized from the `.empty` constant and take the allocator
-as a parameter to each method. The old `.{}` default-literal init for `ArrayList` was
-removed. (For less-common containers, confirm the empty constant against std for your
-build.)
+Companion to foundations.md: maps each DOD principle to Zig layout mechanics. Language
+idioms, the 0.17 migration, comptime, memory discipline and the codegen probe live in the
+`zig` skill (`migration-0.17.md`, `comptime.md`, `memory.md`, `zero-cost.md`); read those
+for anything about how to write Zig rather than how to lay data out. Sections 4–5 cover
+the language's intended handling of optionals and errors.
 
 ---
 
@@ -91,38 +86,11 @@ const counts = std.enums.EnumArray(Color, u32).initFill(0); // dense array keyed
 
 ## 2. Negative-overhead abstraction in Zig
 
-Zig's stance is _no hidden cost_: there is no hidden control flow, no hidden allocation,
-and no hidden function calls. Abstraction happens at **compile time**, so it leaves no
-runtime residue.
-
-### `comptime` generics monomorphize — the abstraction vanishes
-
-```zig
-fn Vec(comptime n: usize, comptime T: type) type {
-    return struct {
-        e: [n]T,
-        fn dot(a: @This(), b: @This()) T {
-            var acc: T = 0;
-            inline for (0..n) |i| acc += a.e[i] * b.e[i]; // unrolled at compile time
-            return acc;
-        }
-    };
-}
-// Vec(3, f32) is a fully specialized type. The generality exists only in the compiler;
-// the emitted code is what you'd hand-write for a 3-float dot product.
-```
-
-Because types are comptime values, generic data structures cost nothing at runtime —
-this is the same "zero-cost" property as Rust's monomorphization, reached via `comptime`
-rather than a separate generics system.
-
-### What this buys you, and the discipline
-
-A clean, generic, well-named transformation in Zig compiles to the same instructions as
-the inlined hand-written loop, because the abstraction is resolved before codegen. The
-discipline from the theory doc still applies: when a loop is hot, check the result —
-`zig build-obj -O ReleaseFast --verbose` / a disassembler / godbolt — rather than
-assuming the unrolling and vectorization happened.
+Abstraction happens at compile time, so a comptime generic leaves no runtime residue: on
+Zig 0.17 a comptime `Map(T, f)` folds into the same symbol as the hand-written loop, while
+a runtime ctx-pointer-plus-fn-pointer interface leaves an indirect call per element. That
+is measured, not assumed — the `zig` skill's `zero-cost.md` holds the probe protocol and
+the full verdict table. Plain loops are not autovectorized on 0.16 or 0.17 (section 9).
 
 ---
 
@@ -130,9 +98,9 @@ assuming the unrolling and vectorization happened.
 
 Several of Muratori's rules are _defaults_ in idiomatic Zig:
 
-- **Caller owns memory (low coupling / optional resource management).** Functions that
-  allocate take an `Allocator` parameter; the caller decides arena vs. page vs. fixed
-  buffer. You literally cannot smuggle a hidden global allocation into idiomatic code.
+- **Caller owns memory.** Functions that allocate take an `Allocator` parameter; the
+  caller decides the strategy. Arenas by lifetime and the full discipline: the `zig`
+  skill's `memory.md`.
 - **Transparent data.** Plain `struct`s with public fields are the norm; expose them
   unless there's an invariant. This keeps data inspectable, serializable, and
   SoA-able — Muratori's "transparent unless a reason to be opaque."
@@ -143,7 +111,7 @@ Several of Muratori's rules are _defaults_ in idiomatic Zig:
   checked contract of how it can fail — surface a named set rather than a catch-all when
   callers need to discriminate.
 
-### I/O is an interface — pass `Io`, like you pass `Allocator` (0.16)
+### I/O is an interface — pass `Io`, like you pass `Allocator`
 
 Anything that performs I/O, blocks, or introduces nondeterminism takes an `Io`. There is
 no global I/O and no function coloring; you choose threaded vs. evented backends at the
@@ -159,17 +127,6 @@ pub fn main(init: std.process.Init) !void {
 `GenericReader`/`AnyReader`/`FixedBufferStream` were removed; use `std.Io.Reader` /
 `std.Io.Writer` (a fixed buffer writer is `std.Io.Writer.fixed(buf)`; a file's
 reader/writer is reached via `file.reader(&buf).interface`).
-
-### `std.ArrayList` in 0.16
-
-The default `std.ArrayList(T)` _is_ the unmanaged container (no stored allocator). Use
-it directly — not `std.ArrayListUnmanaged` (legacy) nor the `Managed` wrapper:
-
-```zig
-var list: std.ArrayList(u8) = .empty;
-defer list.deinit(allocator);
-try list.append(allocator, x);     // allocator passed per call
-```
 
 ---
 
@@ -273,59 +230,14 @@ say both things at once.
 
 ## 6. Memory and allocation in Zig
 
-Zig is the reference implementation of "allocator as an explicit dependency": every
-allocating function takes an `Allocator`, so the caller chooses the strategy and the
-hot-path discipline (match allocator lifetime to data lifetime) is enforced by the
-language rather than left to convention.
-
-The 0.16 "Juicy Main" `Init` struct hands you two allocators for free, so you rarely
-construct one by hand in `main`:
-
-```zig
-pub fn main(init: std.process.Init) !void {
-    const gpa = init.gpa;        // default general-purpose alloc; leak-checked in debug
-    const arena = init.arena;    // permanent, thread-safe arena, cleaned up on exit
-    const io = init.io;
-}
-```
-
-The strategies, mapped to std:
-
-```zig
-// General-purpose with leak detection. (GeneralPurposeAllocator is a deprecated alias.)
-var gpa: std.heap.DebugAllocator(.{}) = .init;
-defer _ = gpa.deinit();             // reports leaks
-const a = gpa.allocator();
-
-// Arena: allocate freely, free all at once when the phase ends. 0.16: thread-safe & lock-free.
-var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-defer arena.deinit();               // frees everything; individual free() is a no-op
-const ra = arena.allocator();       // perfect for per-request / per-frame work
-
-// Fixed buffer: no heap at all. OutOfMemory when full; reset() to reuse.
-var buf: [64 * 1024]u8 = undefined;
-var fba = std.heap.FixedBufferAllocator.init(&buf);
-const fa = fba.allocator();         // hot paths, embedded, bounded work
-```
-
-Other std options: `std.heap.page_allocator` (coarse, straight from the OS),
-`std.heap.c_allocator` (malloc), and `std.heap.smp_allocator` (a fast multithreaded
-general-purpose allocator intended for release builds — confirm availability for your
-build). Tests use `std.testing.allocator`, which is a `DebugAllocator` with leak
-detection.
-
-Practice: pick an arena for anything with a clear phase lifetime; pre-size growable
-containers (`ensureTotalCapacity`) before a loop instead of growing element-by-element;
-and because the allocator is a parameter, you can swap strategies without touching the
-code that uses the memory.
-
-For the leak-freedom discipline — ownership rules, `defer`/`errdefer` pairing, deinit
-completeness, leak testing — use the writing-leak-free-zig skill
-([../writing-leak-free-zig/SKILL.md](../writing-leak-free-zig/SKILL.md)).
+Every allocating function takes an `Allocator`, so matching allocator lifetime to data
+lifetime (foundations.md, question 5) is enforced by the language. Arenas by lifetime,
+`errdefer` pairing, complete deinit, leak tests and the 0.17 allocator names: the `zig`
+skill's `memory.md`.
 
 ---
 
-## 7. Concurrency in Zig (0.16, via `std.Io`)
+## 7. Concurrency in Zig (via `std.Io`)
 
 `std.Thread.Pool` was removed in 0.16; concurrency lives in the `Io` interface, chosen
 at the top like the allocator. Two primitives, with a crucial distinction:
@@ -386,4 +298,50 @@ unrepresentable:
 
 ## 9. SIMD in Zig
 
-Vectorizing a hot loop is the simd-loops skill's job — its [zig.md](../simd-loops/zig.md) carries the `@Vector` builtin table, worked reduce idioms, and the target-CPU gotchas.
+On Zig 0.16 and 0.17 vectors are written, not hoped for: the loop vectorizer is disabled, so a plain `for` loop stays scalar. 0.18 re-enables it, and a plain loop over a contiguous SoA column then vectorizes when it is written in the measured forms (simd-loops [zig.md](../simd-loops/zig.md) § Plain loops under 0.18). That makes the layout matter more: a strided AoS field or a pointer chase is exactly what the vectorizer gives up on. Where the lanes come from (the lane axis, the `W == 1` oracle) is the `zig` skill's `simd-first.md`. Vectorizing a hot loop is the simd-loops skill's job — its [zig.md](../simd-loops/zig.md) carries the `@Vector` builtin table, worked reduce idioms, and the target-CPU gotchas.
+
+What belongs *here* is where a vector may live, because that is a layout decision and it gets made before any loop is written.
+
+### `@Vector` is a register type, not a storage type
+
+Layout is the decision; `@Vector` is the loop detail. Store fields the way section 1 says — contiguous, one array per field — and materialize vectors inside the loop:
+
+```zig
+// boundary: errors, parsing, allocation
+pub fn parse(arena: Allocator, input: []const u8) ![]i32 { ... }
+
+// interior: no allocator, no errors, vectors sized to the machine
+pub fn sum(xs: []const i32) i64 {
+    const lanes = std.simd.suggestVectorLength(i32) orelse return scalarSum(xs);
+    const V = @Vector(lanes, i32);
+    var acc: V = @splat(0);
+    var i: usize = 0;
+    while (i + lanes <= xs.len) : (i += lanes) acc += @as(V, xs[i..][0..lanes].*);
+    ...
+}
+```
+
+**`@Vector` never appears in a struct field or a public signature.** It is not an array with operators — it is a distinct type with its own ABI, and the differences bite exactly where you would use it as storage:
+
+| | `[N]T` | `@Vector(N, T)` |
+|---|---|---|
+| `[4]f32` | size 16, align 4 | size 16, **align 16** |
+| `[3]u8` | size 3, align 1 | size **16**, align 16 |
+| `[8]bool` | size 8, align 1 | size **1** (bit-packed) |
+
+Element types are limited to bool, int, float, and pointer — no structs, no slices — so a "keep everything in SIMD" struct cannot hold the string half of its own data anyway.
+
+### Size vectors to the machine, not to the data
+
+`@Vector(128, i32)` is 512 bytes: sixteen `ymm` registers for one value, on a machine that has sixteen total. It compiles to a stack frame, not to registers:
+
+```asm
+sum_native:                       sum_big:                      # @Vector(128, i32)
+  vpmulld ymm0, ymm1, ymm0          and     rsp, -512
+  ...                               sub     rsp, 512            # spilled before it started
+  ret                               vmovdqa ymm0, [rbp + 688]   # args arrived in memory
+```
+
+`std.simd.suggestVectorLength(T)` is the width, resolved at comptime against the target. A comptime `N` chosen from the data also silently caps how much data the function accepts.
+
+Indexing a vector with a runtime index round-trips it through memory — the escape hatch back to scalar exists and is silent, which is the other reason vectors stay local to the loop that reduces them.

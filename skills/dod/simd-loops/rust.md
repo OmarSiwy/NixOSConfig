@@ -6,7 +6,7 @@ Rust has three SIMD paths, and most Rust SIMD code found in the wild looks frigh
 2. **`std::simd`** — the portable API, still nightly-only behind `#![feature(portable_simd)]` (tracking issue #86656). Reads closest to the shape; costs a pinned nightly toolchain.
 3. **`core::arch` intrinsics** — vendor-named, per-instruction-set, needing `#[target_feature]` and runtime detection. Reach here only for a specific instruction with no portable equivalent (`pclmulqdq`, `pshufb`). Most intrinsics became safe to call inside a matching `#[target_feature]` function in Rust 1.87.
 
-On stable and needing more than autovectorization: the `wide` crate gives portable `u32x8`-style types as an ordinary dependency; `pulp` or `multiversion` add runtime dispatch across instruction sets.
+On stable and needing more than autovectorization: use `fearless_simd` — safe, zero dependencies, runtime dispatch built in. The `rust` skill's `simd-first.md` holds the kernel shape, dispatch, and the per-kernel differential test; this file's five parts map onto it one for one.
 
 ## The five parts (`std::simd`)
 
@@ -38,7 +38,7 @@ for chunk in it.by_ref() { /* vector body */ }
 for &x in it.remainder() { /* scalar tail */ }
 ```
 
-Because the chunk length is a known constant, LLVM vectorizes these bodies far more readily than an index-based loop — which makes this the form to benchmark before writing any explicit SIMD.
+On Rust 1.95 an index-based loop over integer lanes vectorizes too (LLVM hoists or versions the bounds checks), so the chunk form's value is a predictable shape, not a guaranteed win; a float reduction stays scalar in either form. Probe both with the `rust` skill's `zero-cost.md` before writing explicit SIMD.
 
 ## Reduce kind: locate the first element
 

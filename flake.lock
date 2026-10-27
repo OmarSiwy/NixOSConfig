@@ -7,33 +7,33 @@
         ]
       },
       "locked": {
-        "lastModified": 1788818691,
-        "narHash": "sha256-gZItm+eDs9s0LqL7xY4QIdvA3DJ2uZPgPX9KF3Z/LVk=",
+        "lastModified": 1793114634,
+        "narHash": "sha256-bShD9p/PTAosq5lCU1idyApAPagx+ia03KpuksmPy+Q=",
         "owner": "OmarSiwy",
         "repo": "Brill",
-        "rev": "76ce6840f07ae89decf68ac50f946cd5c7d4fd12",
+        "rev": "683bc173c2804349130912f9ad3c4363f5f5bb58",
         "type": "github"
       },
       "original": {
         "owner": "OmarSiwy",
-        "ref": "v0.6.0-brill.1",
+        "ref": "v0.6.0-brill.3",
         "repo": "Brill",
         "type": "github"
       }
     },
     "claude-code": {
       "inputs": {
-        "flake-utils": "flake-utils",
         "nixpkgs": [
           "nixpkgs"
-        ]
+        ],
+        "systems": "systems"
       },
       "locked": {
-        "lastModified": 1780369239,
-        "narHash": "sha256-1hpcdHjLYsdBGzOYK/r1l+UvPrtkgt3wVhLF9D5OWmI=",
+        "lastModified": 1790096491,
+        "narHash": "sha256-zeY26igEw0G1GnVe1fA8pa/+q7mxanzCUV91GUTedzk=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "3cc73775ecceb02a798519a5527f4eb400c8c8e4",
+        "rev": "7e5f1c52ca206b2a3a535ec0e8f89bd1ae5f1afa",
         "type": "github"
       },
       "original": {
@@ -44,17 +44,17 @@
     },
     "codex-cli": {
       "inputs": {
-        "flake-utils": "flake-utils_2",
+        "flake-utils": "flake-utils",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1780345858,
-        "narHash": "sha256-t3dxFjzEFbuMd7o8LWtbnqfOkXDKjzvHXUiXQwvwXtk=",
+        "lastModified": 1790108060,
+        "narHash": "sha256-E0Jcy9cFahc6OVjLD+cHBryUCpwehF6i79Ej/xpSDoA=",
         "owner": "sadjow",
         "repo": "codex-cli-nix",
-        "rev": "ea8119de14a2263330da99363e6303db10a0f84b",
+        "rev": "e6d8256f5d5005a8de04ada728c6bbe33a13a207",
         "type": "github"
       },
       "original": {
@@ -116,24 +116,6 @@
       }
     },
     "flake-utils": {
-      "inputs": {
-        "systems": "systems"
-      },
-      "locked": {
-        "lastModified": 1731533236,
-        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "type": "github"
-      }
-    },
-    "flake-utils_2": {
       "inputs": {
         "systems": "systems_2"
       },

@@ -10,16 +10,16 @@ require("nvim-tree").setup({
 		},
 	},
 	filters = {
-		git_ignored = true,  -- Hide files ignored by git
-		dotfiles = false,    -- Show dotfiles (including .gitignore)
-		git_clean = false,   -- Show files with no git status
+		git_ignored = true, -- Hide files ignored by git
+		dotfiles = false, -- Show dotfiles (including .gitignore)
+		git_clean = false, -- Show files with no git status
 		no_buffer = false,
 		custom = {},
-		exclude = {}
+		exclude = {},
 	},
 	git = {
-		enable = true,       -- Required for git_ignored filter to work
-		ignore = false,      -- Show git-ignored files with different styling
+		enable = true, -- Required for git_ignored filter to work
+		ignore = false, -- Show git-ignored files with different styling
 	},
 })
 
@@ -31,8 +31,16 @@ require("alpha.themes.dashboard").section.footer.val = require("alpha.fortune")(
 require("lualine").setup({
 	options = {
 		theme = "auto",
-		component_separators = " ",
-		section_separators = { left = "", right = "" },
+		component_separators = "",
+		section_separators = "",
+	},
+})
+
+-- Buffer line
+-- Lualine status bar
+require("bufferline").setup({
+	options = {
+		always_show_bufferline = false,
 	},
 })
 
@@ -44,7 +52,7 @@ require("gitsigns").setup()
 
 -- Line highlighting
 require("ibl").setup({
-	indent = { char = "┊" },
+	indent = { char = "|" },
 	scope = { enabled = false },
 })
 

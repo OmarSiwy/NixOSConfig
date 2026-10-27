@@ -22,7 +22,7 @@
     # rill, the window manager river 0.4.x requires. Our fork; `follows` keeps
     # it on this config's nixpkgs so it can't drag in a second stdenv.
     brill = {
-      url = "github:OmarSiwy/Brill/v0.6.0-brill.1";
+      url = "github:OmarSiwy/Brill/v0.6.0-brill.3";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     claude-code = {

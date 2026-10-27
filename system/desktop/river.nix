@@ -129,8 +129,8 @@ in
     playerctl
 
     # ── Networking ─────────────────────────────────
-    # Kept for nm-connection-editor (the eww NETWORK card opens it). The
-    # nm-applet tray daemon itself is not started — see river/scripts/process.sh.
+    # nm-applet (eww tray, started in river/scripts/process.sh) +
+    # nm-connection-editor (nm-applet menu "Edit Connections").
     networkmanagerapplet
 
     # ── GPU / Monitoring ─────────────────────────────
