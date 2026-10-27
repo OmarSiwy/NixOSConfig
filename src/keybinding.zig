@@ -5,7 +5,6 @@ const xkbcommon = @import("xkbcommon");
 const river = wayland.client.river;
 
 const config = @import("config.zig");
-const input = @import("input.zig");
 const layout = @import("layout.zig");
 const types = @import("types.zig");
 
@@ -538,7 +537,9 @@ fn keybindingPressed(
             if (wm.getConfig().cursor) |cursor| {
                 wm.river_seat.?.setXcursorTheme(cursor.theme, cursor.size);
             }
-            input.setup(wm);
+            // No input.setup here: the libinput listener is already set (a
+            // second setListener hits `unreachable` and aborts rill), and
+            // devices are only announced once, so .input changes need a restart.
             layout.update(wm.output_list, wm.getConfig());
 
             wm.status = .setup_bindings;
