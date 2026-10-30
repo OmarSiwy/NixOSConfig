@@ -1,7 +1,7 @@
 # Overlay: river 0.4.8 compositor.
 # river-classic in nixpkgs is used as the base to build river 0.4.8.
 # River 0.4.x is a non-monolithic compositor — it requires a separate WM.
-# That WM is `rill`, which comes from the `brill` flake input's overlay.
+# That WM is `rill`, built from pkgs/brill (our fork) by an overlay in flake.nix.
 final: prev: {
   river-classic = prev.river-classic.overrideAttrs (old: {
     pname = "river";

@@ -72,7 +72,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   meta = {
     description = "Minimalist scrolling window manager for the river compositor";
-    homepage = "https://github.com/OmarSiwy/Brill";
+    homepage = "https://github.com/OmarSiwy/NixOSConfig/tree/main/pkgs/brill";
     license = lib.licenses.mit;
     platforms = lib.platforms.linux;
     mainProgram = "rill";

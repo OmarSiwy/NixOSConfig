@@ -19,12 +19,6 @@
     lanzaboote = {
       url = "github:nix-community/lanzaboote/v0.4.2";
     };
-    # rill, the window manager river 0.4.x requires. Our fork; `follows` keeps
-    # it on this config's nixpkgs so it can't drag in a second stdenv.
-    brill = {
-      url = "github:OmarSiwy/Brill/v0.6.0-brill.3";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     claude-code = {
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -42,7 +36,6 @@
       nixpkgs-latest,
       home-manager,
       lanzaboote,
-      brill,
       claude-code,
       codex-cli,
       ...
@@ -68,7 +61,8 @@
           { nixpkgs.config.allowUnfree = true; }
           {
             nixpkgs.overlays = [
-              brill.overlays.default # pkgs.rill
+              # rill, the window manager river 0.4.x requires: our fork, in pkgs/brill.
+              (final: prev: { rill = final.callPackage ./pkgs/brill/package.nix { }; })
               (import ./system/overlays/river.nix)
               # ani-cli 5.0 (nixpkgs is on 4.14) — drop once nixpkgs catches up
               (final: prev: {

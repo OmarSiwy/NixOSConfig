@@ -1,26 +1,5 @@
 {
   "nodes": {
-    "brill": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1793114634,
-        "narHash": "sha256-bShD9p/PTAosq5lCU1idyApAPagx+ia03KpuksmPy+Q=",
-        "owner": "OmarSiwy",
-        "repo": "Brill",
-        "rev": "683bc173c2804349130912f9ad3c4363f5f5bb58",
-        "type": "github"
-      },
-      "original": {
-        "owner": "OmarSiwy",
-        "ref": "v0.6.0-brill.3",
-        "repo": "Brill",
-        "type": "github"
-      }
-    },
     "claude-code": {
       "inputs": {
         "nixpkgs": [
@@ -308,7 +287,6 @@
     },
     "root": {
       "inputs": {
-        "brill": "brill",
         "claude-code": "claude-code",
         "codex-cli": "codex-cli",
         "home-manager": "home-manager",
